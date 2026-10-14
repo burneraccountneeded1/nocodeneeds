@@ -52,9 +52,9 @@ local function runForPlace()
 	local startedAt = os.clock()
 
 	local ran, runErr = pcall(function()
-		local chunk = loadstring(source)
+		local chunk, compileErr = loadstring(source)
 		if not chunk then
-			error("loadstring returned nil (syntax error?)")
+			error("loadstring failed: " .. tostring(compileErr))
 		end
 		chunk()
 	end)
