@@ -1,6 +1,7 @@
 # mspaint
 
 ## Added
+- Entity ESP Fill toggle and Fill Transparency slider
 - Camera FOV slider (60 - 120)
 - Objective ESP: highlights levers at Room###.Scriptable.LeverModel
 - Entity ESP & spawn notifier for Hisoka and Ambush

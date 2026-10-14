@@ -373,6 +373,21 @@ EspGroupbox:AddDropdown("EntityESPFilter", {
 	Tooltip = "Choose which entities Entity ESP highlights",
 })
 
+EspGroupbox:AddToggle("EntityESPFill", {
+	Text = "Entity ESP Fill",
+	Default = true,
+	Tooltip = "Fill the entity highlight instead of only outlining it",
+})
+
+EspGroupbox:AddSlider("EntityESPFillTransparency", {
+	Text = "Entity ESP Fill Transparency",
+	Default = 0.5,
+	Min = 0,
+	Max = 1,
+	Rounding = 2,
+	Tooltip = "0 = solid fill, 1 = invisible fill (outline only)",
+})
+
 EspGroupbox:AddToggle("PlayerESP", {
 	Text = "Player ESP",
 	Default = false,
@@ -676,7 +691,7 @@ local function createEntry(target, color, baseText)
 	}
 end
 
-local function updateSet(cache, targets, enabled, color, textFor)
+local function updateSet(cache, targets, enabled, color, textFor, fillTransparency)
 	if not enabled then
 		for target, entry in pairs(cache) do
 			destroyEntry(entry)
@@ -700,6 +715,7 @@ local function updateSet(cache, targets, enabled, color, textFor)
 
 			entry.highlight.FillColor = color
 			entry.highlight.OutlineColor = color
+			entry.highlight.FillTransparency = fillTransparency or 0.5
 			entry.label.TextColor3 = color
 			entry.baseText = textFor(target)
 
@@ -2282,6 +2298,8 @@ loadingStatus("starting esp loop", 0.96)
 
 local doorEspEnabled = false
 local entityEspEnabled = false
+local entityEspFill = true
+local entityEspFillTransparency = 0.5
 local lockerEspEnabled = false
 local playerEspEnabled = false
 local minecartEspEnabled = false
@@ -2294,6 +2312,14 @@ end)
 
 Toggles.EntityESP:OnChanged(function(Value)
 	entityEspEnabled = Value
+end)
+
+Toggles.EntityESPFill:OnChanged(function(Value)
+	entityEspFill = Value
+end)
+
+Options.EntityESPFillTransparency:OnChanged(function(Value)
+	entityEspFillTransparency = Value
 end)
 
 Toggles.LockerESP:OnChanged(function(Value)
@@ -2452,11 +2478,13 @@ task.spawn(function()
 		local playerColor = Options.PlayerESPColor.Value
 		local objectiveColor = Options.ObjectiveESPColor.Value
 
+		local entityFill = entityEspFill and entityEspFillTransparency or 1
+
 		updateSet(doorCache, collectDoors(), doorEspEnabled, doorColor, function()
 			return "Door"
 		end)
 
-		updateSet(entityCache, collectEntities(), entityEspEnabled, entityColor, entityDisplayName)
+		updateSet(entityCache, collectEntities(), entityEspEnabled, entityColor, entityDisplayName, entityFill)
 
 		updateSet(lockerCache, collectLockers(), lockerEspEnabled, lockerColor, function()
 			return "Locker"
