@@ -1,8 +1,8 @@
 local LobbyPlaceId = 18186775539
 local MainPlaceId = 77614252294790
 
-local EspUrl = "https://raw.githubusercontent.com/burneraccountneeded1/thescripts/refs/heads/main/esp.lua"
-local LobbyUrl = "https://raw.githubusercontent.com/burneraccountneeded1/thescripts/refs/heads/main/lobby.lua"
+local EspUrl = "https://raw.githubusercontent.com/burneraccountneeded1/nocodeneeds/refs/heads/main/esp.lua"
+local LobbyUrl = "https://raw.githubusercontent.com/burneraccountneeded1/nocodeneeds/refs/heads/main/lobby.lua"
 
 local ScriptUrls = {
 	[MainPlaceId] = EspUrl,

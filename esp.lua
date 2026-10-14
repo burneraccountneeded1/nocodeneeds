@@ -28,7 +28,7 @@ end
 
 -- Loader that "Execute on Teleport" re-runs after a teleport.
 -- Set this to your script's loader, e.g. loadstring(game:HttpGet("https://..."))()
-local ExecuteOnTeleportLoader = ""
+local ExecuteOnTeleportLoader = 'loadstring(game:HttpGet("https://raw.githubusercontent.com/burneraccountneeded1/nocodeneeds/refs/heads/main/main.lua"))()'
 
 -- =========================================================
 -- Window / Tabs / Groupboxes
