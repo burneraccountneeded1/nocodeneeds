@@ -16,18 +16,25 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local LocalPlayer = Players.LocalPlayer
 
+-- Current floor, read from ReplicatedStorage.GameInfo.GameStyle (a StringValue)
+local GameInfo = ReplicatedStorage:WaitForChild("GameInfo", 10)
+local GameStyleValue = GameInfo and GameInfo:FindFirstChild("GameStyle")
+local GameStyle = (GameStyleValue and GameStyleValue.Value) or ""
+local IsGraveyard = string.lower(GameStyle) == "graveyard"
+
 -- Add any other workspace entity names here as you discover them
 local EntityNames = { "Rush", "Ram", "Stare", "Eyes", "Hisoka", "Ambush" }
 local AvoidEntityNames = { "Rush", "Ram", "Ambush" }
 local EntityEspNames = { "Rush", "Ram", "Stare", "Eyes", "Peakaboo", "Hisoka", "Ambush" }
 local GraveyardEntityEspNames = { "Hisoka" }
+local GraveyardEntityNames = { "Hisoka" }
 local RoomNamePattern = "^[Rr]oom%d+$"
 
 local entityEspSelections = {}
 
 local function initializeEntityEspSelections()
 	entityEspSelections = {}
-	if GameStyle == "Graveyard" then
+	if IsGraveyard then
 		entityEspSelections["Hisoka"] = true
 	else
 		for _, name in ipairs(EntityEspNames) do
@@ -176,9 +183,6 @@ end
 
 loadingStatus("loading library", 0.05)
 
-local GameInfo = ReplicatedStorage:WaitForChild("GameInfo", 10)
-local GameStyle = GameInfo and GameInfo:FindFirstChild("GameStyle") and GameInfo.GameStyle.Value or ""
-
 local Tabs = {
 	Changelog = Window:AddTab("Changelog", "scroll-text"),
 	Character = Window:AddTab("Character", "person-standing"),
@@ -190,7 +194,7 @@ local Tabs = {
 }
 
 -- Floor-specific tab
-if GameStyle == "Graveyard" then
+if IsGraveyard then
 	Tabs.Floor = Window:AddTab("Floor", "graveyard")
 end
 loadingStatus("loading interface", 0.12)
@@ -216,6 +220,8 @@ ChangelogGroupbox:AddLabel("- Camera FOV slider (60 - 120)", true)
 ChangelogGroupbox:AddLabel("- Objective ESP: highlights levers at Room###.Scriptable.LeverModel", true)
 ChangelogGroupbox:AddLabel("- Entity ESP & spawn notifier for Hisoka and Ambush", true)
 ChangelogGroupbox:AddLabel("- Loading GUI that shows what is loading on start", true)
+ChangelogGroupbox:AddLabel("- Floor tab that only appears on the Graveyard floor", true)
+ChangelogGroupbox:AddLabel("- Graveyard restricts Entity ESP & notifier to Hisoka", true)
 
 ChangelogGroupbox:AddDivider()
 ChangelogGroupbox:AddLabel("<b>Changed</b>", false)
@@ -362,7 +368,7 @@ EspGroupbox:AddToggle("EntityESP", {
 })
 
 EspGroupbox:AddDropdown("EntityESPFilter", {
-	Values = (GameStyle == "Graveyard" and GraveyardEntityEspNames) or EntityEspNames,
+	Values = (IsGraveyard and GraveyardEntityEspNames) or EntityEspNames,
 	Default = 1,
 	Multi = true,
 	Text = "Entities in ESP",
@@ -469,7 +475,7 @@ local NotifierGroupbox = Tabs.Notifier:AddGroupbox({
 })
 
 NotifierGroupbox:AddDropdown("NotifierEntities", {
-	Values = (GameStyle == "Graveyard" and { "Hisoka" }) or { "Rush", "Screech", "Ram", "Stare", "Eyes", "Hisoka", "Ambush" },
+	Values = (IsGraveyard and { "Hisoka" }) or { "Rush", "Screech", "Ram", "Stare", "Eyes", "Hisoka", "Ambush" },
 	Default = 1,
 	Multi = true,
 	Tooltip = "Workspace entities spawn in the workspace, Screech spawns in the camera",
@@ -2407,7 +2413,7 @@ Options.EntityESPFilter:OnChanged(function(Value)
 	entityEspSelections = Value or {}
 end)
 
-if GameStyle == "Graveyard" then
+if IsGraveyard then
 	Options.EntityESPFilter:SetValue({ Hisoka = true })
 else
 	Options.EntityESPFilter:SetValue({
@@ -2453,8 +2459,54 @@ Options.NotifierEntities:OnChanged(function(Value)
 	notifySelections = Value or {}
 end)
 
-if GameStyle == "Graveyard" then
-	notifySelections = { Hisoka = true }
+if IsGraveyard then
+	Options.NotifierEntities:SetValue({ Hisoka = true })
+end
+
+-- =========================================================
+-- Floor handling (re-runs whenever GameStyle changes)
+-- =========================================================
+
+local AllNotifierEntities = { "Rush", "Screech", "Ram", "Stare", "Eyes", "Hisoka", "Ambush" }
+
+local function applyGameStyle(style)
+	local graveyard = string.lower(style or "") == "graveyard"
+
+	if graveyard then
+		if not Tabs.Floor then
+			Tabs.Floor = Window:AddTab("Floor", "graveyard")
+		end
+		Options.EntityESPFilter:SetValues(GraveyardEntityEspNames)
+		Options.EntityESPFilter:SetValue({ Hisoka = true })
+		Options.NotifierEntities:SetValues(GraveyardEntityNames)
+		Options.NotifierEntities:SetValue({ Hisoka = true })
+	else
+		if Tabs.Floor then
+			if Library.ActiveTab == Tabs.Floor then
+				Tabs.Changelog:Show()
+			end
+			Tabs.Floor:Destroy()
+			Tabs.Floor = nil
+		end
+		Options.EntityESPFilter:SetValues(EntityEspNames)
+		Options.EntityESPFilter:SetValue({
+			Rush = true,
+			Ram = true,
+			Stare = true,
+			Eyes = true,
+			Peakaboo = true,
+			Hisoka = true,
+			Ambush = true,
+		})
+		Options.NotifierEntities:SetValues(AllNotifierEntities)
+		Options.NotifierEntities:SetValue({ Rush = true })
+	end
+end
+
+if GameStyleValue then
+	GameStyleValue:GetPropertyChangedSignal("Value"):Connect(function()
+		applyGameStyle(GameStyleValue.Value)
+	end)
 end
 
 -- Rush (and anything else in EntityNames) spawns in the workspace

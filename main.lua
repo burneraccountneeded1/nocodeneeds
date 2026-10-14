@@ -67,5 +67,5 @@ local function runForPlace()
 end
 
 -- This loader does NOT queue itself: it only runs when executed directly, or when
--- esp.lua's "Execute on Teleport" toggle queues it.
+-- game.lua's "Execute on Teleport" toggle queues it.
 runForPlace()
