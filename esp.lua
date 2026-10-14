@@ -12,7 +12,6 @@ local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
 local Lighting = game:GetService("Lighting")
 local SoundService = game:GetService("SoundService")
-local StarterGui = game:GetService("StarterGui")
 
 local LocalPlayer = Players.LocalPlayer
 
@@ -114,10 +113,11 @@ local function loadingStatus(text, progress)
 	end
 	print("[mspaint] " .. text)
 	pcall(function()
-		StarterGui:SetCore("SendNotification", {
+		Library:Notify({
 			Title = "mspaint",
-			Text = text,
-			Duration = 3,
+			Description = text,
+			Icon = "loader",
+			Time = 3,
 		})
 	end)
 end
@@ -130,12 +130,10 @@ local function finishLoading()
 end
 
 setupLoadingGui()
-loadingStatus("loading library", 0.05)
 
 -- =========================================================
 -- Window / Tabs / Groupboxes
 -- =========================================================
-loadingStatus("loading interface", 0.12)
 
 local Window = Library:CreateWindow({
 	Title = "mspaint",
@@ -144,21 +142,52 @@ local Window = Library:CreateWindow({
 	NotifySide = "Right",
 })
 
+loadingStatus("loading library", 0.05)
+
 local Tabs = {
-	Main = Window:AddTab("Main", "house"),
+	Changelog = Window:AddTab("Changelog", "scroll-text"),
+	Character = Window:AddTab("Character", "person-standing"),
 	Visuals = Window:AddTab("Visuals", "eye"),
 	Notifier = Window:AddTab("Notifier", "bell"),
 	Exploit = Window:AddTab("Exploit", "shield"),
 	Debug = Window:AddTab("Debug", "bug"),
 	["UI Settings"] = Window:AddTab("UI Settings", "settings"),
 }
+loadingStatus("loading interface", 0.12)
 
 -- =========================================================
--- Main tab: movement
+-- Changelog tab
+-- =========================================================
+loadingStatus("loading changelog", 0.15)
+
+local ChangelogGroupbox = Tabs.Changelog:AddGroupbox({
+	Side = "Left",
+	Name = "Changelog",
+	Description = "Recent changes",
+	IconName = "scroll-text",
+})
+
+ChangelogGroupbox:AddLabel("<b>mspaint</b> - anticheat test", false)
+
+ChangelogGroupbox:AddDivider()
+ChangelogGroupbox:AddLabel("<b>Added</b>", false)
+ChangelogGroupbox:AddLabel("- Minecart Speed: drive Room###.RoamingCart at a set speed", true)
+ChangelogGroupbox:AddLabel("- Camera FOV slider (60 - 120)", true)
+ChangelogGroupbox:AddLabel("- Objective ESP: highlights levers at Room###.Scriptable.LeverModel", true)
+ChangelogGroupbox:AddLabel("- Entity ESP & spawn notifier for Hisoka and Ambush", true)
+ChangelogGroupbox:AddLabel("- Loading GUI that shows what is loading on start", true)
+
+ChangelogGroupbox:AddDivider()
+ChangelogGroupbox:AddLabel("<b>Changed</b>", false)
+ChangelogGroupbox:AddLabel("- Movement, Automation and Minecart moved to the Character tab", true)
+ChangelogGroupbox:AddLabel("- Ambush is now avoided by Avoid Entities", true)
+
+-- =========================================================
+-- Character tab: movement
 -- =========================================================
 loadingStatus("loading movement", 0.2)
 
-local MovementGroupbox = Tabs.Main:AddGroupbox({
+local MovementGroupbox = Tabs.Character:AddGroupbox({
 	Side = "Left",
 	Name = "Movement",
 	Description = "Character modifiers",
@@ -219,7 +248,7 @@ MovementGroupbox:AddToggle("Noclip", {
 
 loadingStatus("loading minecart", 0.26)
 
-local MinecartGroupbox = Tabs.Main:AddGroupbox({
+local MinecartGroupbox = Tabs.Character:AddGroupbox({
 	Side = "Left",
 	Name = "Minecart",
 	Description = "RoamingCart modifiers",
@@ -242,7 +271,7 @@ MinecartGroupbox:AddSlider("MinecartSpeed", {
 
 loadingStatus("loading automation", 0.3)
 
-local AutomationGroupbox = Tabs.Main:AddGroupbox({
+local AutomationGroupbox = Tabs.Character:AddGroupbox({
 	Side = "Right",
 	Name = "Automation",
 	Description = "Play the game for you",

@@ -13,7 +13,6 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local LobbyPlaceId = 18186775539
 local MainPlaceId = 77614252294790
 
-local StarterGui = game:GetService("StarterGui")
 local LocalPlayer = game:GetService("Players").LocalPlayer
 
 -- =========================================================
@@ -99,10 +98,11 @@ local function loadingStatus(text, progress)
 	end
 	print("[mspaint] " .. text)
 	pcall(function()
-		StarterGui:SetCore("SendNotification", {
+		Library:Notify({
 			Title = "mspaint",
-			Text = text,
-			Duration = 3,
+			Description = text,
+			Icon = "loader",
+			Time = 3,
 		})
 	end)
 end
@@ -115,7 +115,6 @@ local function finishLoading()
 end
 
 setupLoadingGui()
-loadingStatus("loading library", 0.1)
 
 local Window = Library:CreateWindow({
 	Title = "mspaint",
@@ -123,6 +122,8 @@ local Window = Library:CreateWindow({
 	Icon = 95816097006870,
 	NotifySide = "Right",
 })
+
+loadingStatus("loading library", 0.1)
 
 local Tabs = {
 	Lobby = Window:AddTab("Lobby", "building"),
