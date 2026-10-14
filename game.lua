@@ -576,6 +576,28 @@ UtilityGroupbox:AddToggle("AutoInteract", {
 	Tooltip = "Auto-fires prompts in AddedAssets (skips lockers)",
 })
 
+local PositionGroupbox = Tabs.Exploit:AddGroupbox({
+	Side = "Right",
+	Name = "Position",
+	Description = "Move your character",
+	IconName = "move",
+})
+
+PositionGroupbox:AddToggle("PositionOffset", {
+	Text = "Position Offset",
+	Default = false,
+	Tooltip = "Teleports you below your position; your camera stays where it was",
+})
+
+PositionGroupbox:AddSlider("PositionOffsetAmount", {
+	Text = "Offset (studs)",
+	Default = 35,
+	Min = 1,
+	Max = 150,
+	Rounding = 0,
+	Tooltip = "How many studs below your position to teleport",
+})
+
 -- =========================================================
 -- Debug tab
 -- =========================================================
@@ -1873,6 +1895,72 @@ Toggles.AvoidEntities:OnChanged(function(Value)
 	end
 end)
 
+-- =========================================================
+-- Position offset
+--
+-- Copies the character's position, moves it down by the configured amount, and
+-- shifts the camera by the same amount so the view stays where it was.
+-- =========================================================
+
+local positionOffsetApplied = 0
+local positionOffsetBaseCameraOffset = Vector3.zero
+
+local function positionOffsetSetTotal(total)
+	local delta = total - positionOffsetApplied
+	local root = getRootPart()
+	if root and delta ~= 0 then
+		root.CFrame = root.CFrame - Vector3.new(0, delta, 0)
+	end
+	positionOffsetApplied = total
+
+	local character = LocalPlayer.Character
+	local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+	if humanoid then
+		humanoid.CameraOffset = positionOffsetBaseCameraOffset + Vector3.new(0, total, 0)
+	end
+end
+
+local function startPositionOffset()
+	if not getRootPart() then
+		return false
+	end
+
+	local character = LocalPlayer.Character
+	local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+	positionOffsetBaseCameraOffset = humanoid and humanoid.CameraOffset or Vector3.zero
+	positionOffsetApplied = 0
+	positionOffsetSetTotal(Options.PositionOffsetAmount.Value)
+	return true
+end
+
+local function stopPositionOffset()
+	positionOffsetSetTotal(0)
+end
+
+Toggles.PositionOffset:OnChanged(function(Value)
+	if Value then
+		if not startPositionOffset() then
+			Toggles.PositionOffset:SetValue(false)
+		end
+	else
+		stopPositionOffset()
+	end
+end)
+
+Options.PositionOffsetAmount:OnChanged(function(Value)
+	if Toggles.PositionOffset.Value then
+		positionOffsetSetTotal(Value)
+	end
+end)
+
+LocalPlayer.CharacterAdded:Connect(function()
+	if Toggles.PositionOffset.Value then
+		task.wait(0.5)
+		positionOffsetApplied = 0
+		startPositionOffset()
+	end
+end)
+
 loadingStatus("loading void effect", 0.88)
 
 -- =========================================================
@@ -2672,6 +2760,7 @@ Library:OnUnload(function()
 	stopAvoidEntities()
 	stopVoidEffect()
 	stopAutoInteract()
+	stopPositionOffset()
 	clearRaycastVisuals()
 	if originalNamecall and type(hookmetamethod) == "function" then
 		pcall(function()

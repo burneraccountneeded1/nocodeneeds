@@ -6,5 +6,6 @@
 - Entity ESP now draws a fill and outline for entities with invisible hitboxes
 
 ## Added
+- Exploit tab Position groupbox with a Position Offset toggle and amount slider
 - Character tab Actions groupbox with Reset Character and Teleport to Lobby buttons
 - Entity ESP Fill toggle and Fill Transparency slider
