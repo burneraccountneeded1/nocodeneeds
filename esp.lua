@@ -17,7 +17,7 @@ local LocalPlayer = Players.LocalPlayer
 
 -- Add any other workspace entity names here as you discover them
 local EntityNames = { "Rush", "Ram", "Stare", "Eyes", "Hisoka", "Ambush" }
-local AvoidEntityNames = { "Rush", "Ram" }
+local AvoidEntityNames = { "Rush", "Ram", "Ambush" }
 local EntityEspNames = { "Rush", "Ram", "Stare", "Eyes", "Peakaboo", "Hisoka", "Ambush" }
 local RoomNamePattern = "^[Rr]oom%d+$"
 
