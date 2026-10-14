@@ -16,7 +16,8 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local LocalPlayer = Players.LocalPlayer
 
--- Current floor, read from ReplicatedStorage.GameInfo.GameStyle (a StringValue)
+-- Current floor, read from ReplicatedStorage.GameInfo.GameStyle (a StringValue).
+-- Known floors: "Foundation" (main floor) and "Graveyard".
 local GameInfo = ReplicatedStorage:WaitForChild("GameInfo", 10)
 local GameStyleValue = GameInfo and GameInfo:FindFirstChild("GameStyle")
 local GameStyle = (GameStyleValue and GameStyleValue.Value) or ""
@@ -215,7 +216,6 @@ ChangelogGroupbox:AddLabel("<b>mspaint</b>", false)
 
 ChangelogGroupbox:AddDivider()
 ChangelogGroupbox:AddLabel("<b>Added</b>", false)
-ChangelogGroupbox:AddLabel("- Minecart Speed: drive Room###.RoamingCart at a set speed", true)
 ChangelogGroupbox:AddLabel("- Camera FOV slider (60 - 120)", true)
 ChangelogGroupbox:AddLabel("- Objective ESP: highlights levers at Room###.Scriptable.LeverModel", true)
 ChangelogGroupbox:AddLabel("- Entity ESP & spawn notifier for Hisoka and Ambush", true)
@@ -225,7 +225,8 @@ ChangelogGroupbox:AddLabel("- Graveyard restricts Entity ESP & notifier to Hisok
 
 ChangelogGroupbox:AddDivider()
 ChangelogGroupbox:AddLabel("<b>Changed</b>", false)
-ChangelogGroupbox:AddLabel("- Movement, Automation and Minecart moved to the Character tab", true)
+ChangelogGroupbox:AddLabel("- Movement and Automation moved to the Character tab", true)
+ChangelogGroupbox:AddLabel("- Removed Minecart Speed (RoamingCart is server-controlled)", true)
 ChangelogGroupbox:AddLabel("- Ambush is now avoided by Avoid Entities", true)
 
 -- =========================================================
@@ -290,29 +291,6 @@ MovementGroupbox:AddToggle("Noclip", {
 	Text = "Noclip",
 	Default = false,
 	Tooltip = "Disables collision on your character",
-})
-
-loadingStatus("loading minecart", 0.26)
-
-local MinecartGroupbox = Tabs.Character:AddGroupbox({
-	Side = "Left",
-	Name = "Minecart",
-	Description = "RoamingCart modifiers",
-	IconName = "train-front",
-})
-
-MinecartGroupbox:AddToggle("MinecartSpeedToggle", {
-	Text = "Minecart Speed",
-	Default = false,
-	Tooltip = "Drives Room###.RoamingCart at the set speed",
-})
-
-MinecartGroupbox:AddSlider("MinecartSpeed", {
-	Text = "Speed",
-	Default = 50,
-	Min = 0,
-	Max = 300,
-	Rounding = 0,
 })
 
 loadingStatus("loading automation", 0.3)
@@ -1064,101 +1042,6 @@ local function updateMinecartEsp(enabled, color)
 		end
 	end
 end
-
--- =========================================================
--- Minecart speed
--- =========================================================
-
-local cartSpeedEnabled = false
-local cartSpeedConnection
-local cartAttachment
-local cartVelocity
-
-local function findRoamingCart()
-	local generatedRooms = Workspace:FindFirstChild("GeneratedRooms")
-	if not generatedRooms then
-		return nil
-	end
-
-	for _, room in ipairs(generatedRooms:GetChildren()) do
-		if room.Name:match(RoomNamePattern) then
-			local cart = room:FindFirstChild("RoamingCart")
-			if cart and isEspTarget(cart) then
-				return cart
-			end
-		end
-	end
-
-	return nil
-end
-
-local function getCartPart(cart)
-	if not cart then
-		return nil
-	end
-	if cart:IsA("BasePart") then
-		return cart
-	end
-	if cart:IsA("Model") then
-		return cart.PrimaryPart or cart:FindFirstChildWhichIsA("BasePart", true)
-	end
-	return nil
-end
-
-local function clearCartVelocity()
-	if cartVelocity then
-		cartVelocity:Destroy()
-		cartVelocity = nil
-	end
-	if cartAttachment then
-		cartAttachment:Destroy()
-		cartAttachment = nil
-	end
-end
-
-local function applyCartSpeed()
-	local part = getCartPart(findRoamingCart())
-	if not part then
-		clearCartVelocity()
-		return
-	end
-
-	local speed = Options.MinecartSpeed.Value
-
-	if not cartVelocity or not cartAttachment or cartAttachment.Parent ~= part then
-		clearCartVelocity()
-		cartAttachment = Instance.new("Attachment")
-		cartAttachment.Parent = part
-		cartVelocity = Instance.new("LinearVelocity")
-		cartVelocity.Attachment0 = cartAttachment
-		cartVelocity.RelativeTo = Enum.ActuatorRelativeTo.World
-		cartVelocity.MaxForce = math.huge
-		cartVelocity.Parent = part
-	end
-
-	local direction = part.CFrame.LookVector
-	cartVelocity.VectorVelocity = direction * speed
-	part.AssemblyLinearVelocity = direction * speed
-end
-
-Toggles.MinecartSpeedToggle:OnChanged(function(Value)
-	cartSpeedEnabled = Value
-	if not Value then
-		clearCartVelocity()
-	end
-end)
-
-Options.MinecartSpeed:OnChanged(function()
-	if cartSpeedEnabled then
-		pcall(applyCartSpeed)
-	end
-end)
-
-cartSpeedConnection = RunService.Heartbeat:Connect(function()
-	if cartSpeedEnabled then
-		pcall(applyCartSpeed)
-	end
-end)
 
 -- =========================================================
 -- Target collection
@@ -2597,11 +2480,6 @@ Library:OnUnload(function()
 	if cameraConnection then
 		cameraConnection:Disconnect()
 	end
-	if cartSpeedConnection then
-		cartSpeedConnection:Disconnect()
-		cartSpeedConnection = nil
-	end
-	clearCartVelocity()
 	stopFly()
 	restoreNoclip()
 	removeFullbright()
