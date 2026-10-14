@@ -3,16 +3,16 @@ local StarterGui = game:GetService("StarterGui")
 local LobbyPlaceId = 18186775539
 local MainPlaceId = 77614252294790
 
-local EspUrl = "https://raw.githubusercontent.com/burneraccountneeded1/nocodeneeds/refs/heads/main/esp.lua"
+local GameUrl = "https://raw.githubusercontent.com/burneraccountneeded1/nocodeneeds/refs/heads/main/game.lua"
 local LobbyUrl = "https://raw.githubusercontent.com/burneraccountneeded1/nocodeneeds/refs/heads/main/lobby.lua"
 
 local ScriptUrls = {
-	[MainPlaceId] = EspUrl,
+	[MainPlaceId] = GameUrl,
 	[LobbyPlaceId] = LobbyUrl,
 }
 
 local ScriptNames = {
-	[MainPlaceId] = "esp.lua (main game)",
+	[MainPlaceId] = "game.lua (main game)",
 	[LobbyPlaceId] = "lobby.lua (lobby)",
 }
 
