@@ -2,15 +2,4 @@
 
 ## Added
 - Entity ESP Fill toggle and Fill Transparency slider
-- Camera FOV slider (60 - 120)
-- Objective ESP: highlights levers at Room###.Scriptable.LeverModel
-- Entity ESP & spawn notifier for Hisoka and Ambush
-- Loading GUI that shows what is loading on start
-- Floor tab that only appears on the Graveyard floor
-- Graveyard restricts Entity ESP & notifier to Hisoka
 - Changelog is now read from .changelog in the repository
-
-## Changed
-- Movement and Automation moved to the Character tab
-- Removed Minecart Speed (RoamingCart is server-controlled)
-- Ambush is now avoided by Avoid Entities
