@@ -12,6 +12,7 @@ local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
 local Lighting = game:GetService("Lighting")
 local SoundService = game:GetService("SoundService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local LocalPlayer = Players.LocalPlayer
 
@@ -19,12 +20,23 @@ local LocalPlayer = Players.LocalPlayer
 local EntityNames = { "Rush", "Ram", "Stare", "Eyes", "Hisoka", "Ambush" }
 local AvoidEntityNames = { "Rush", "Ram", "Ambush" }
 local EntityEspNames = { "Rush", "Ram", "Stare", "Eyes", "Peakaboo", "Hisoka", "Ambush" }
+local GraveyardEntityEspNames = { "Hisoka" }
 local RoomNamePattern = "^[Rr]oom%d+$"
 
 local entityEspSelections = {}
-for _, name in ipairs(EntityEspNames) do
-	entityEspSelections[name] = true
+
+local function initializeEntityEspSelections()
+	entityEspSelections = {}
+	if GameStyle == "Graveyard" then
+		entityEspSelections["Hisoka"] = true
+	else
+		for _, name in ipairs(EntityEspNames) do
+			entityEspSelections[name] = true
+		end
+	end
 end
+
+initializeEntityEspSelections()
 
 -- Loader that "Execute on Teleport" re-runs after a teleport.
 -- Set this to your script's loader, e.g. loadstring(game:HttpGet("https://..."))()
@@ -164,6 +176,9 @@ end
 
 loadingStatus("loading library", 0.05)
 
+local GameInfo = ReplicatedStorage:WaitForChild("GameInfo", 10)
+local GameStyle = GameInfo and GameInfo:FindFirstChild("GameStyle") and GameInfo.GameStyle.Value or ""
+
 local Tabs = {
 	Changelog = Window:AddTab("Changelog", "scroll-text"),
 	Character = Window:AddTab("Character", "person-standing"),
@@ -173,6 +188,11 @@ local Tabs = {
 	Debug = Window:AddTab("Debug", "bug"),
 	["UI Settings"] = Window:AddTab("UI Settings", "settings"),
 }
+
+-- Floor-specific tab
+if GameStyle == "Graveyard" then
+	Tabs.Floor = Window:AddTab("Floor", "graveyard")
+end
 loadingStatus("loading interface", 0.12)
 
 -- =========================================================
@@ -342,7 +362,7 @@ EspGroupbox:AddToggle("EntityESP", {
 })
 
 EspGroupbox:AddDropdown("EntityESPFilter", {
-	Values = EntityEspNames,
+	Values = (GameStyle == "Graveyard" and GraveyardEntityEspNames) or EntityEspNames,
 	Default = 1,
 	Multi = true,
 	Text = "Entities in ESP",
@@ -449,10 +469,9 @@ local NotifierGroupbox = Tabs.Notifier:AddGroupbox({
 })
 
 NotifierGroupbox:AddDropdown("NotifierEntities", {
-	Values = { "Rush", "Screech", "Ram", "Stare", "Eyes", "Hisoka", "Ambush" },
+	Values = (GameStyle == "Graveyard" and { "Hisoka" }) or { "Rush", "Screech", "Ram", "Stare", "Eyes", "Hisoka", "Ambush" },
 	Default = 1,
 	Multi = true,
-	Text = "Notify when these spawn",
 	Tooltip = "Workspace entities spawn in the workspace, Screech spawns in the camera",
 })
 
@@ -2388,15 +2407,19 @@ Options.EntityESPFilter:OnChanged(function(Value)
 	entityEspSelections = Value or {}
 end)
 
-Options.EntityESPFilter:SetValue({
-	Rush = true,
-	Ram = true,
-	Stare = true,
-	Eyes = true,
-	Peakaboo = true,
-	Hisoka = true,
-	Ambush = true,
-})
+if GameStyle == "Graveyard" then
+	Options.EntityESPFilter:SetValue({ Hisoka = true })
+else
+	Options.EntityESPFilter:SetValue({
+		Rush = true,
+		Ram = true,
+		Stare = true,
+		Eyes = true,
+		Peakaboo = true,
+		Hisoka = true,
+		Ambush = true,
+	})
+end
 
 loadingStatus("loading spawn notifier", 0.97)
 
@@ -2429,6 +2452,10 @@ end
 Options.NotifierEntities:OnChanged(function(Value)
 	notifySelections = Value or {}
 end)
+
+if GameStyle == "Graveyard" then
+	notifySelections = { Hisoka = true }
+end
 
 -- Rush (and anything else in EntityNames) spawns in the workspace
 Workspace.DescendantAdded:Connect(function(descendant)
