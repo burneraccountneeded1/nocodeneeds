@@ -137,7 +137,6 @@ setupLoadingGui()
 
 local Window = Library:CreateWindow({
 	Title = "mspaint",
-	Footer = "anticheat test",
 	Icon = 95816097006870,
 	NotifySide = "Right",
 })
@@ -167,7 +166,7 @@ local ChangelogGroupbox = Tabs.Changelog:AddGroupbox({
 	IconName = "scroll-text",
 })
 
-ChangelogGroupbox:AddLabel("<b>mspaint</b> - anticheat test", false)
+ChangelogGroupbox:AddLabel("<b>mspaint</b>", false)
 
 ChangelogGroupbox:AddDivider()
 ChangelogGroupbox:AddLabel("<b>Added</b>", false)
@@ -300,7 +299,6 @@ loadingStatus("loading visuals & entities", 0.38)
 local EspGroupbox = Tabs.Visuals:AddGroupbox({
 	Side = "Left",
 	Name = "General",
-	Description = "Anticheat testing",
 	IconName = "eye",
 })
 
