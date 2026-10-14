@@ -1,0 +1,2307 @@
+local repo = "https://raw.githubusercontent.com/deividcomsono/Obsidian/main/"
+local Library = loadstring(game:HttpGet(repo .. "Library.lua"))()
+local ThemeManager = loadstring(game:HttpGet(repo .. "addons/ThemeManager.lua"))()
+local SaveManager = loadstring(game:HttpGet(repo .. "addons/SaveManager.lua"))()
+
+local Options = Library.Options
+local Toggles = Library.Toggles
+
+local Players = game:GetService("Players")
+local Workspace = game:GetService("Workspace")
+local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
+local Lighting = game:GetService("Lighting")
+local SoundService = game:GetService("SoundService")
+
+local LocalPlayer = Players.LocalPlayer
+
+-- Add any other workspace entity names here as you discover them
+local EntityNames = { "Rush", "Ram", "Stare", "Eyes", "Hisoka", "Ambush" }
+local AvoidEntityNames = { "Rush", "Ram" }
+local EntityEspNames = { "Rush", "Ram", "Stare", "Eyes", "Peakaboo", "Hisoka", "Ambush" }
+local RoomNamePattern = "^[Rr]oom%d+$"
+
+local entityEspSelections = {}
+for _, name in ipairs(EntityEspNames) do
+	entityEspSelections[name] = true
+end
+
+-- Loader that "Execute on Teleport" re-runs after a teleport.
+-- Set this to your script's loader, e.g. loadstring(game:HttpGet("https://..."))()
+local ExecuteOnTeleportLoader = ""
+
+-- =========================================================
+-- Window / Tabs / Groupboxes
+-- =========================================================
+
+local Window = Library:CreateWindow({
+	Title = "mspaint",
+	Footer = "anticheat test",
+	Icon = 95816097006870,
+	NotifySide = "Right",
+})
+
+local Tabs = {
+	Main = Window:AddTab("Main", "house"),
+	Visuals = Window:AddTab("Visuals", "eye"),
+	Notifier = Window:AddTab("Notifier", "bell"),
+	Exploit = Window:AddTab("Exploit", "shield"),
+	Debug = Window:AddTab("Debug", "bug"),
+	["UI Settings"] = Window:AddTab("UI Settings", "settings"),
+}
+
+-- =========================================================
+-- Main tab: movement
+-- =========================================================
+
+local MovementGroupbox = Tabs.Main:AddGroupbox({
+	Side = "Left",
+	Name = "Movement",
+	Description = "Character modifiers",
+	IconName = "person-standing",
+})
+
+MovementGroupbox:AddToggle("EnableWalkSpeed", {
+	Text = "WalkSpeed",
+	Default = false,
+	Tooltip = "Constantly re-applies WalkSpeed (game resets it)",
+})
+
+MovementGroupbox:AddSlider("WalkSpeed", {
+	Text = "WalkSpeed Value",
+	Default = 16,
+	Min = 0,
+	Max = 250,
+	Rounding = 0,
+})
+
+MovementGroupbox:AddDivider()
+
+MovementGroupbox:AddToggle("EnableJump", {
+	Text = "Jump Power",
+	Default = false,
+	Tooltip = "Constantly re-applies JumpPower",
+})
+
+MovementGroupbox:AddSlider("JumpPower", {
+	Text = "Jump Power Value",
+	Default = 50,
+	Min = 0,
+	Max = 500,
+	Rounding = 0,
+})
+
+MovementGroupbox:AddDivider()
+
+MovementGroupbox:AddToggle("Fly", {
+	Text = "Fly",
+	Default = false,
+	Tooltip = "WASD to move, Space / LeftCtrl for up & down",
+})
+
+MovementGroupbox:AddSlider("FlySpeed", {
+	Text = "Fly Speed",
+	Default = 60,
+	Min = 10,
+	Max = 500,
+	Rounding = 0,
+})
+
+MovementGroupbox:AddToggle("Noclip", {
+	Text = "Noclip",
+	Default = false,
+	Tooltip = "Disables collision on your character",
+})
+
+local AutomationGroupbox = Tabs.Main:AddGroupbox({
+	Side = "Right",
+	Name = "Automation",
+	Description = "Play the game for you",
+	IconName = "play",
+})
+
+AutomationGroupbox:AddToggle("Autoplay", {
+	Text = "Autoplay",
+	Default = false,
+	Tooltip = "Teleports you through the doors automatically",
+})
+
+AutomationGroupbox:AddSlider("AutoplayDelay", {
+	Text = "Autoplay Delay",
+	Default = 0.35,
+	Min = 0.1,
+	Max = 3,
+	Rounding = 2,
+})
+
+-- =========================================================
+-- Visuals tab: ESP
+-- =========================================================
+
+local EspGroupbox = Tabs.Visuals:AddGroupbox({
+	Side = "Left",
+	Name = "General",
+	Description = "Anticheat testing",
+	IconName = "eye",
+})
+
+EspGroupbox:AddToggle("DoorESP", {
+	Text = "Door ESP",
+	Default = false,
+	Tooltip = "Highlights doors inside GeneratedRooms/room###",
+}):AddColorPicker("DoorESPColor", {
+	Default = Color3.fromRGB(0, 170, 255),
+	Title = "Door ESP Color",
+})
+
+EspGroupbox:AddToggle("EntityESP", {
+	Text = "Entity ESP",
+	Default = false,
+	Tooltip = "Highlights entities (Rush, ...)",
+}):AddColorPicker("EntityESPColor", {
+	Default = Color3.fromRGB(255, 40, 40),
+	Title = "Entity ESP Color",
+})
+
+EspGroupbox:AddDropdown("EntityESPFilter", {
+	Values = EntityEspNames,
+	Default = 1,
+	Multi = true,
+	Text = "Entities in ESP",
+	Tooltip = "Choose which entities Entity ESP highlights",
+})
+
+EspGroupbox:AddToggle("PlayerESP", {
+	Text = "Player ESP",
+	Default = false,
+	Tooltip = "Highlights other players",
+}):AddColorPicker("PlayerESPColor", {
+	Default = Color3.fromRGB(0, 255, 120),
+	Title = "Player ESP Color",
+})
+
+EspGroupbox:AddToggle("LockerESP", {
+	Text = "Locker ESP",
+	Default = false,
+	Tooltip = "Highlights lockers (Room###.AddedAssets.Locker)",
+}):AddColorPicker("LockerESPColor", {
+	Default = Color3.fromRGB(255, 215, 0),
+	Title = "Locker ESP Color",
+})
+
+EspGroupbox:AddToggle("MinecartESP", {
+	Text = "Minecart Direction ESP",
+	Default = false,
+	Tooltip = "Highlights minecart nodes & draws the correct path",
+}):AddColorPicker("MinecartESPColor", {
+	Default = Color3.fromRGB(0, 255, 255),
+	Title = "Minecart ESP Color",
+})
+
+EspGroupbox:AddToggle("ObjectiveESP", {
+	Text = "Objective ESP",
+	Default = false,
+	Tooltip = "Highlights levers (Room###.Scriptable.LeverModel)",
+}):AddColorPicker("ObjectiveESPColor", {
+	Default = Color3.fromRGB(180, 120, 255),
+	Title = "Objective ESP Color",
+})
+
+local WorldGroupbox = Tabs.Visuals:AddGroupbox({
+	Side = "Right",
+	Name = "World",
+	Description = "Lighting modifiers",
+	IconName = "sun",
+})
+
+WorldGroupbox:AddToggle("Fullbright", {
+	Text = "Fullbright",
+	Default = false,
+	Tooltip = "Brightens the world (Lighting)",
+})
+
+local CameraGroupbox = Tabs.Visuals:AddGroupbox({
+	Side = "Right",
+	Name = "Camera",
+	Description = "View settings",
+	IconName = "camera",
+})
+
+CameraGroupbox:AddSlider("FOV", {
+	Text = "Field of View",
+	Default = 70,
+	Min = 60,
+	Max = 120,
+	Rounding = 0,
+})
+
+local initialFov = 70
+do
+	local camera = Workspace.CurrentCamera
+	if camera then
+		initialFov = camera.FieldOfView
+	end
+end
+
+local function applyFov()
+	local camera = Workspace.CurrentCamera
+	if camera then
+		camera.FieldOfView = Options.FOV.Value
+	end
+end
+
+Options.FOV:OnChanged(function()
+	applyFov()
+end)
+
+Workspace:GetPropertyChangedSignal("CurrentCamera"):Connect(function()
+	task.defer(applyFov)
+end)
+
+-- =========================================================
+-- Notifier tab
+-- =========================================================
+
+local NotifierGroupbox = Tabs.Notifier:AddGroupbox({
+	Side = "Left",
+	Name = "Spawn Notifier",
+	Description = "Alerts when entities spawn",
+	IconName = "bell",
+})
+
+NotifierGroupbox:AddDropdown("NotifierEntities", {
+	Values = { "Rush", "Screech", "Ram", "Stare", "Eyes", "Hisoka", "Ambush" },
+	Default = 1,
+	Multi = true,
+	Text = "Notify when these spawn",
+	Tooltip = "Workspace entities spawn in the workspace, Screech spawns in the camera",
+})
+
+-- =========================================================
+-- Exploit tab
+-- =========================================================
+
+local ExploitGroupbox = Tabs.Exploit:AddGroupbox({
+	Side = "Left",
+	Name = "Entities",
+	Description = "Counter entity exploits",
+	IconName = "shield",
+})
+
+ExploitGroupbox:AddToggle("AntiEyes", {
+	Text = "Anti-Eyes",
+	Default = false,
+	Tooltip = "Stops you looking at Eyes (looking at it damages you)",
+})
+
+ExploitGroupbox:AddToggle("AvoidEntities", {
+	Text = "Avoid Entities",
+	Default = false,
+	Tooltip = "Teleports you 1000 studs away while an entity is spawned, then back",
+})
+
+local UtilityGroupbox = Tabs.Exploit:AddGroupbox({
+	Side = "Right",
+	Name = "Utility",
+	Description = "World & interaction",
+	IconName = "wrench",
+})
+
+UtilityGroupbox:AddToggle("DisableVoidEffect", {
+	Text = "Disable Void Effect",
+	Default = false,
+	Tooltip = "Removes the screen distortion and stops the void sound",
+})
+
+UtilityGroupbox:AddToggle("AutoInteract", {
+	Text = "Auto Interact",
+	Default = false,
+	Tooltip = "Auto-fires prompts in AddedAssets (skips lockers)",
+})
+
+-- =========================================================
+-- Debug tab
+-- =========================================================
+
+local DebugLogGroupbox = Tabs.Debug:AddGroupbox({
+	Side = "Left",
+	Name = "Logging",
+	Description = "Console output",
+	IconName = "terminal",
+})
+
+DebugLogGroupbox:AddToggle("LogEntitySpawns", {
+	Text = "Log Entity Spawns",
+	Default = false,
+	Tooltip = "Prints to the console when an entity spawns",
+})
+
+DebugLogGroupbox:AddToggle("LogRaycasts", {
+	Text = "Log Raycasts",
+	Default = false,
+	Tooltip = "Prints every raycast the game performs",
+})
+
+local DebugRayGroupbox = Tabs.Debug:AddGroupbox({
+	Side = "Right",
+	Name = "Raycasts",
+	Description = "Raycast visualiser",
+	IconName = "scan",
+})
+
+DebugRayGroupbox:AddToggle("ShowRaycasts", {
+	Text = "Show Raycasts",
+	Default = false,
+	Tooltip = "Draws a line for every raycast the game performs",
+})
+
+DebugRayGroupbox:AddSlider("RaycastVisualTime", {
+	Text = "Ray Lifetime",
+	Default = 0.15,
+	Min = 0.05,
+	Max = 2,
+	Rounding = 2,
+})
+
+-- =========================================================
+-- ESP engine
+-- =========================================================
+
+local EspFolder = Instance.new("Folder")
+EspFolder.Name = "mspaint_esp"
+EspFolder.Parent = Workspace
+
+local doorCache = {}
+local entityCache = {}
+local lockerCache = {}
+local playerCache = {}
+local minecartCache = {}
+local objectiveCache = {}
+
+local function isEspTarget(inst)
+	return inst ~= nil and (inst:IsA("BasePart") or inst:IsA("Model"))
+end
+
+local function getWorldPosition(target)
+	if target:IsA("BasePart") then
+		return target.Position
+	end
+
+	if target:IsA("Model") then
+		if target.PrimaryPart then
+			return target.PrimaryPart.Position
+		end
+
+		local hrp = target:FindFirstChild("HumanoidRootPart")
+		if hrp and hrp:IsA("BasePart") then
+			return hrp.Position
+		end
+
+		local part = target:FindFirstChildWhichIsA("BasePart", true)
+		if part then
+			return part.Position
+		end
+
+		local ok, center = pcall(function()
+			return select(1, target:GetBoundingBox())
+		end)
+		if ok and center then
+			return center
+		end
+	end
+
+	return nil
+end
+
+local function getViewerPosition()
+	local character = LocalPlayer.Character
+	local hrp = character and character:FindFirstChild("HumanoidRootPart")
+	if hrp then
+		return hrp.Position
+	end
+	local camera = Workspace.CurrentCamera
+	return camera and camera.CFrame.Position or Vector3.zero
+end
+
+local function destroyEntry(entry)
+	if entry.highlight then
+		entry.highlight:Destroy()
+	end
+	if entry.billboard then
+		entry.billboard:Destroy()
+	end
+end
+
+local function createEntry(target, color, baseText)
+	local highlight = Instance.new("Highlight")
+	highlight.Name = "mspaint_highlight"
+	highlight.Adornee = target
+	highlight.FillColor = color
+	highlight.OutlineColor = color
+	highlight.FillTransparency = 0.5
+	highlight.OutlineTransparency = 0
+	highlight.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
+	highlight.Parent = EspFolder
+
+	local billboard = Instance.new("BillboardGui")
+	billboard.Name = "mspaint_billboard"
+	billboard.Adornee = target
+	billboard.Size = UDim2.new(0, 220, 0, 44)
+	billboard.StudsOffsetWorldSpace = Vector3.new(0, 3, 0)
+	billboard.AlwaysOnTop = true
+	billboard.MaxDistance = 1500
+	billboard.Parent = EspFolder
+
+	local label = Instance.new("TextLabel")
+	label.BackgroundTransparency = 1
+	label.Size = UDim2.new(1, 0, 1, 0)
+	label.Font = Enum.Font.SourceSansBold
+	label.TextSize = 16
+	label.TextColor3 = color
+	label.TextStrokeTransparency = 0.2
+	label.TextStrokeColor3 = Color3.new(0, 0, 0)
+	label.Text = baseText
+	label.Parent = billboard
+
+	return {
+		highlight = highlight,
+		billboard = billboard,
+		label = label,
+		baseText = baseText,
+	}
+end
+
+local function updateSet(cache, targets, enabled, color, textFor)
+	if not enabled then
+		for target, entry in pairs(cache) do
+			destroyEntry(entry)
+			cache[target] = nil
+		end
+		return
+	end
+
+	local alive = {}
+	local viewerPos = getViewerPosition()
+
+	for _, target in ipairs(targets) do
+		if isEspTarget(target) and target.Parent then
+			alive[target] = true
+
+			local entry = cache[target]
+			if not entry then
+				entry = createEntry(target, color, textFor(target))
+				cache[target] = entry
+			end
+
+			entry.highlight.FillColor = color
+			entry.highlight.OutlineColor = color
+			entry.label.TextColor3 = color
+			entry.baseText = textFor(target)
+
+			local worldPos = getWorldPosition(target)
+			if worldPos then
+				local distance = (worldPos - viewerPos).Magnitude
+				entry.label.Text = string.format("%s\n[%d studs]", entry.baseText, math.floor(distance))
+			else
+				entry.label.Text = entry.baseText
+			end
+		end
+	end
+
+	for target, entry in pairs(cache) do
+		if not alive[target] then
+			destroyEntry(entry)
+			cache[target] = nil
+		end
+	end
+end
+
+-- =========================================================
+-- Minecart direction ESP
+--
+-- Node data lives at Room###.Scriptable.MinecartNodes. The root holds the
+-- trunk nodes and Path1/Path2/... subfolders hold the branch nodes. The
+-- correct way to go is the path that contains a dismount, so that branch is
+-- drawn in green while the trunk and the other branches use the ESP color.
+-- =========================================================
+
+local MinecartNodeFolderName = "MinecartNodes"
+local MinecartFallbackFolders = { "Assets", "Necessities", "AddedAssets" }
+local MinecartCorrectColor = Color3.fromRGB(85, 255, 85)
+local MinecartVehicleColor = Color3.fromRGB(255, 140, 0)
+
+local function getNodeOrder(node)
+	for _, attrName in ipairs({ "Index", "Order", "NodeIndex", "Step" }) do
+		local value = node:GetAttribute(attrName)
+		if typeof(value) == "number" then
+			return value
+		end
+	end
+
+	local number = tonumber(node.Name:match("%d+"))
+	if number then
+		return number
+	end
+
+	return math.huge
+end
+
+local function isCorrectNode(node)
+	for attrName, value in pairs(node:GetAttributes()) do
+		local lower = attrName:lower()
+		local directional = lower:find("correct")
+			or lower:find("right")
+			or lower:find("answer")
+			or lower:find("solution")
+			or lower == "direction"
+		if directional and value ~= false and value ~= nil then
+			return true
+		end
+	end
+
+	local name = node.Name:lower()
+	return name:find("correct") ~= nil or name:find("right") ~= nil
+end
+
+local function findMinecartNodeContainer(room)
+	local scriptable = room:FindFirstChild("Scriptable")
+	if scriptable then
+		local nodes = scriptable:FindFirstChild(MinecartNodeFolderName)
+		if nodes then
+			return nodes
+		end
+	end
+
+	for _, folderName in ipairs(MinecartFallbackFolders) do
+		local folder = room:FindFirstChild(folderName)
+		if folder then
+			local nodes = folder:FindFirstChild(MinecartNodeFolderName, true)
+			if nodes then
+				return nodes
+			end
+		end
+	end
+
+	return nil
+end
+
+local function findMinecartVehicle(room)
+	local roots = {
+		room:FindFirstChild("Scriptable"),
+		room:FindFirstChild("Assets"),
+		room:FindFirstChild("Necessities"),
+		room:FindFirstChild("AddedAssets"),
+	}
+
+	for _, root in ipairs(roots) do
+		if root then
+			for _, descendant in ipairs(root:GetDescendants()) do
+				local lower = descendant.Name:lower()
+				if lower:find("minecart") and not lower:find("node") and isEspTarget(descendant) then
+					return descendant
+				end
+			end
+		end
+	end
+
+	return nil
+end
+
+local function isPathContainer(child)
+	if child:IsA("BasePart") then
+		return false
+	end
+	return child.Name:lower():match("^path%d*$") ~= nil
+end
+
+local function collectNodeParts(container, recursive)
+	local nodes = {}
+	local seen = {}
+
+	local function add(part)
+		if part and part:IsA("BasePart") and not seen[part] then
+			seen[part] = true
+			table.insert(nodes, part)
+		end
+	end
+
+	for _, child in ipairs(container:GetChildren()) do
+		if isPathContainer(child) then
+			-- branch, handled separately
+		elseif child:IsA("BasePart") then
+			add(child)
+		elseif child:IsA("Model") then
+			add(child.PrimaryPart or child:FindFirstChildWhichIsA("BasePart", true))
+		elseif recursive and child:IsA("Folder") then
+			for _, descendant in ipairs(child:GetDescendants()) do
+				if descendant:IsA("BasePart") then
+					add(descendant)
+				end
+			end
+		end
+	end
+
+	table.sort(nodes, function(a, b)
+		local orderA = getNodeOrder(a)
+		local orderB = getNodeOrder(b)
+		if orderA == orderB then
+			return a.Name < b.Name
+		end
+		return orderA < orderB
+	end)
+
+	return nodes
+end
+
+local function findMinecartPaths(container)
+	local paths = {}
+	for _, child in ipairs(container:GetChildren()) do
+		if isPathContainer(child) then
+			table.insert(paths, child)
+		end
+	end
+	table.sort(paths, function(a, b)
+		local orderA = tonumber(a.Name:match("%d+")) or math.huge
+		local orderB = tonumber(b.Name:match("%d+")) or math.huge
+		return orderA < orderB
+	end)
+	return paths
+end
+
+local function containerHasDismount(container)
+	for _, descendant in ipairs(container:GetDescendants()) do
+		if descendant.Name:lower():find("dismount") then
+			return true
+		end
+		local flag = descendant:GetAttribute("Dismount")
+		if flag ~= nil and flag ~= false then
+			return true
+		end
+	end
+	return false
+end
+
+local function createBeam(a, b, color, width, track)
+	local attachment0 = track(Instance.new("Attachment"))
+	attachment0.Parent = a
+
+	local attachment1 = track(Instance.new("Attachment"))
+	attachment1.Parent = b
+
+	local beam = track(Instance.new("Beam"))
+	beam.Attachment0 = attachment0
+	beam.Attachment1 = attachment1
+	beam.Color = ColorSequence.new(color)
+	beam.FaceCamera = true
+	beam.Width0 = width
+	beam.Width1 = width
+	beam.Transparency = NumberSequence.new(0.3)
+	beam.Parent = EspFolder
+	return beam
+end
+
+local function clearMinecart(room)
+	local entry = minecartCache[room]
+	if not entry then
+		return
+	end
+
+	for _, inst in ipairs(entry.instances) do
+		if inst and inst.Parent then
+			inst:Destroy()
+		end
+	end
+
+	minecartCache[room] = nil
+end
+
+local function clearAllMinecarts()
+	for room in pairs(minecartCache) do
+		clearMinecart(room)
+	end
+end
+
+local function buildMinecart(room, container, color)
+	local nodes = collectNodeParts(container, false)
+	local paths = findMinecartPaths(container)
+
+	if #nodes == 0 and #paths == 0 then
+		return
+	end
+
+	local instances = {}
+	local function track(inst)
+		table.insert(instances, inst)
+		return inst
+	end
+
+	local function highlightNode(node, nodeColor)
+		local highlight = track(Instance.new("Highlight"))
+		highlight.Adornee = node
+		highlight.FillColor = nodeColor
+		highlight.OutlineColor = nodeColor
+		highlight.FillTransparency = 0.4
+		highlight.OutlineTransparency = 0
+		highlight.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
+		highlight.Parent = EspFolder
+	end
+
+	for _, node in ipairs(nodes) do
+		local nodeColor = isCorrectNode(node) and MinecartCorrectColor or color
+		highlightNode(node, nodeColor)
+	end
+
+	for i = 1, #nodes - 1 do
+		createBeam(nodes[i], nodes[i + 1], MinecartCorrectColor, 0.15, track)
+	end
+
+	-- the correct way to go is the path that contains a dismount
+	local correctPath
+	for _, path in ipairs(paths) do
+		if containerHasDismount(path) then
+			correctPath = path
+			break
+		end
+	end
+
+	local lastTrunkNode = nodes[#nodes]
+
+	for _, path in ipairs(paths) do
+		local pathNodes = collectNodeParts(path, true)
+		if #pathNodes > 0 then
+			local isCorrect = path == correctPath
+			if not correctPath then
+				for _, node in ipairs(pathNodes) do
+					if isCorrectNode(node) then
+						isCorrect = true
+						break
+					end
+				end
+			end
+
+			local pathColor = isCorrect and MinecartCorrectColor or color
+			local width = isCorrect and 0.3 or 0.15
+
+			for _, node in ipairs(pathNodes) do
+				highlightNode(node, pathColor)
+			end
+
+			if lastTrunkNode then
+				createBeam(lastTrunkNode, pathNodes[1], pathColor, width, track)
+			end
+
+			for i = 1, #pathNodes - 1 do
+				createBeam(pathNodes[i], pathNodes[i + 1], pathColor, width, track)
+			end
+		end
+	end
+
+	local vehicle = findMinecartVehicle(room)
+	if vehicle then
+		local highlight = track(Instance.new("Highlight"))
+		highlight.Adornee = vehicle
+		highlight.FillColor = MinecartVehicleColor
+		highlight.OutlineColor = Color3.fromRGB(255, 255, 255)
+		highlight.FillTransparency = 0.4
+		highlight.OutlineTransparency = 0
+		highlight.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
+		highlight.Parent = EspFolder
+	end
+
+	minecartCache[room] = {
+		instances = instances,
+		color = color,
+		container = container,
+	}
+end
+
+local function updateMinecartEsp(enabled, color)
+	if not enabled then
+		clearAllMinecarts()
+		return
+	end
+
+	local generatedRooms = Workspace:FindFirstChild("GeneratedRooms")
+	if not generatedRooms then
+		clearAllMinecarts()
+		return
+	end
+
+	local seen = {}
+	for _, room in ipairs(generatedRooms:GetChildren()) do
+		if room.Name:match(RoomNamePattern) then
+			local container = findMinecartNodeContainer(room)
+			if container then
+				seen[room] = true
+				local entry = minecartCache[room]
+				if not entry then
+					buildMinecart(room, container, color)
+				elseif entry.color ~= color or entry.container ~= container then
+					clearMinecart(room)
+					buildMinecart(room, container, color)
+				end
+			end
+		end
+	end
+
+	for room in pairs(minecartCache) do
+		if not seen[room] or not room.Parent then
+			clearMinecart(room)
+		end
+	end
+end
+
+-- =========================================================
+-- Target collection
+-- =========================================================
+
+local function findDoorPart(room)
+	for _, child in ipairs(room:GetChildren()) do
+		if child.Name:lower() == "door" and isEspTarget(child) then
+			return child
+		end
+	end
+
+	for _, child in ipairs(room:GetChildren()) do
+		if child.Name:lower():find("door") and isEspTarget(child) then
+			return child
+		end
+	end
+
+	for _, descendant in ipairs(room:GetDescendants()) do
+		if descendant.Name:lower():find("door") and isEspTarget(descendant) then
+			return descendant
+		end
+	end
+
+	return nil
+end
+
+local function collectDoors()
+	local doors = {}
+	local generatedRooms = Workspace:FindFirstChild("GeneratedRooms")
+	if not generatedRooms then
+		return doors
+	end
+
+	for _, room in ipairs(generatedRooms:GetChildren()) do
+		if room.Name:match(RoomNamePattern) then
+			local door = findDoorPart(room)
+			if door then
+				table.insert(doors, door)
+			end
+		end
+	end
+
+	return doors
+end
+
+local function collectPeakabooLockers()
+	local lockers = {}
+	local generatedRooms = Workspace:FindFirstChild("GeneratedRooms")
+	if not generatedRooms then
+		return lockers
+	end
+
+	for _, room in ipairs(generatedRooms:GetChildren()) do
+		if room.Name:match(RoomNamePattern) then
+			for _, folderName in ipairs({ "AddedAssets", "Assets", "Necessities" }) do
+				local folder = room:FindFirstChild(folderName)
+				if folder then
+					for _, child in ipairs(folder:GetChildren()) do
+						local lower = child.Name:lower()
+						if (lower:find("peakaboo") or lower:find("peekaboo")) and isEspTarget(child) then
+							table.insert(lockers, child)
+						end
+					end
+				end
+			end
+		end
+	end
+
+	return lockers
+end
+
+local function collectEntities()
+	local entities = {}
+	for _, name in ipairs(EntityNames) do
+		if entityEspSelections[name] then
+			local entity = Workspace:FindFirstChild(name, true)
+			if isEspTarget(entity) then
+				table.insert(entities, entity)
+			end
+		end
+	end
+
+	if entityEspSelections.Peakaboo then
+		for _, peakaboo in ipairs(collectPeakabooLockers()) do
+			table.insert(entities, peakaboo)
+		end
+	end
+
+	return entities
+end
+
+local function entityDisplayName(target)
+	local lower = target.Name:lower()
+	if lower:find("peakaboo") or lower:find("peekaboo") then
+		return "Peakaboo"
+	end
+	return target.Name
+end
+
+local function collectLockers()
+	local lockers = {}
+	local generatedRooms = Workspace:FindFirstChild("GeneratedRooms")
+	if not generatedRooms then
+		return lockers
+	end
+
+	for _, room in ipairs(generatedRooms:GetChildren()) do
+		if room.Name:match(RoomNamePattern) then
+			local addedAssets = room:FindFirstChild("AddedAssets")
+			if addedAssets then
+				for _, descendant in ipairs(addedAssets:GetDescendants()) do
+					if descendant.Name == "Locker" and isEspTarget(descendant) then
+						table.insert(lockers, descendant)
+					end
+				end
+			end
+		end
+	end
+
+	return lockers
+end
+
+local function collectPlayers()
+	local characters = {}
+	for _, player in ipairs(Players:GetPlayers()) do
+		if player ~= LocalPlayer and player.Character and isEspTarget(player.Character) then
+			table.insert(characters, player.Character)
+		end
+	end
+	return characters
+end
+
+local function collectObjectives()
+	local objectives = {}
+	local generatedRooms = Workspace:FindFirstChild("GeneratedRooms")
+	if not generatedRooms then
+		return objectives
+	end
+
+	for _, room in ipairs(generatedRooms:GetChildren()) do
+		if room.Name:match(RoomNamePattern) then
+			local scriptable = room:FindFirstChild("Scriptable")
+			local lever = scriptable and scriptable:FindFirstChild("LeverModel", true)
+			if lever and isEspTarget(lever) then
+				table.insert(objectives, lever)
+			end
+		end
+	end
+
+	return objectives
+end
+
+-- =========================================================
+-- Character modifiers
+-- =========================================================
+
+local walkSpeedEnabled = false
+local walkSpeedValue = 16
+local jumpEnabled = false
+local jumpPowerValue = 50
+local noclipEnabled = false
+local noclipSaved = {}
+
+local function getCharacter()
+	local character = LocalPlayer.Character
+	if character and character:FindFirstChildOfClass("Humanoid") then
+		return character
+	end
+	return nil
+end
+
+local function restoreNoclip()
+	for part, value in pairs(noclipSaved) do
+		pcall(function()
+			part.CanCollide = value
+		end)
+	end
+	table.clear(noclipSaved)
+end
+
+-- Fly
+
+local flyEnabled = false
+local flySpeedValue = 60
+local flyVelocity
+local flyGyro
+
+local function stopFly()
+	if flyVelocity then
+		flyVelocity:Destroy()
+		flyVelocity = nil
+	end
+	if flyGyro then
+		flyGyro:Destroy()
+		flyGyro = nil
+	end
+	local character = getCharacter()
+	local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+	if humanoid then
+		humanoid.PlatformStand = false
+	end
+end
+
+local function startFly()
+	local character = getCharacter()
+	if not character then
+		return
+	end
+	local hrp = character:FindFirstChild("HumanoidRootPart")
+	local humanoid = character:FindFirstChildOfClass("Humanoid")
+	if not hrp or not humanoid then
+		return
+	end
+
+	stopFly()
+
+	flyVelocity = Instance.new("BodyVelocity")
+	flyVelocity.MaxForce = Vector3.new(1, 1, 1) * math.huge
+	flyVelocity.Velocity = Vector3.zero
+	flyVelocity.Parent = hrp
+
+	flyGyro = Instance.new("BodyGyro")
+	flyGyro.MaxTorque = Vector3.new(1, 1, 1) * math.huge
+	flyGyro.P = 10000
+	flyGyro.CFrame = hrp.CFrame
+	flyGyro.Parent = hrp
+
+	humanoid.PlatformStand = true
+end
+
+Toggles.EnableWalkSpeed:OnChanged(function(Value)
+	walkSpeedEnabled = Value
+end)
+
+Options.WalkSpeed:OnChanged(function(Value)
+	walkSpeedValue = Value
+end)
+
+Toggles.EnableJump:OnChanged(function(Value)
+	jumpEnabled = Value
+end)
+
+Options.JumpPower:OnChanged(function(Value)
+	jumpPowerValue = Value
+end)
+
+Toggles.Noclip:OnChanged(function(Value)
+	noclipEnabled = Value
+	if not Value then
+		restoreNoclip()
+	end
+end)
+
+Toggles.Fly:OnChanged(function(Value)
+	flyEnabled = Value
+	if Value then
+		startFly()
+	else
+		stopFly()
+	end
+end)
+
+Options.FlySpeed:OnChanged(function(Value)
+	flySpeedValue = Value
+end)
+
+LocalPlayer.CharacterAdded:Connect(function()
+	table.clear(noclipSaved)
+	task.wait(0.5)
+	if flyEnabled then
+		startFly()
+	end
+end)
+
+local movementConnection
+movementConnection = RunService.RenderStepped:Connect(function()
+	local character = getCharacter()
+
+	if character then
+		local humanoid = character:FindFirstChildOfClass("Humanoid")
+		if humanoid then
+			if walkSpeedEnabled then
+				humanoid.WalkSpeed = walkSpeedValue
+			end
+			if jumpEnabled then
+				humanoid.UseJumpPower = true
+				humanoid.JumpPower = jumpPowerValue
+			end
+		end
+
+		if noclipEnabled then
+			for _, part in ipairs(character:GetDescendants()) do
+				if part:IsA("BasePart") then
+					if noclipSaved[part] == nil then
+						noclipSaved[part] = part.CanCollide
+					end
+					part.CanCollide = false
+				end
+			end
+		end
+	end
+
+	if flyEnabled and flyVelocity and flyVelocity.Parent then
+		local camera = Workspace.CurrentCamera
+		if camera then
+			local move = Vector3.zero
+
+			if UserInputService:IsKeyDown(Enum.KeyCode.W) then
+				move = move + camera.CFrame.LookVector
+			end
+			if UserInputService:IsKeyDown(Enum.KeyCode.S) then
+				move = move - camera.CFrame.LookVector
+			end
+			if UserInputService:IsKeyDown(Enum.KeyCode.A) then
+				move = move - camera.CFrame.RightVector
+			end
+			if UserInputService:IsKeyDown(Enum.KeyCode.D) then
+				move = move + camera.CFrame.RightVector
+			end
+			if UserInputService:IsKeyDown(Enum.KeyCode.Space) then
+				move = move + Vector3.yAxis
+			end
+			if UserInputService:IsKeyDown(Enum.KeyCode.LeftControl) then
+				move = move - Vector3.yAxis
+			end
+
+			if move.Magnitude > 0 then
+				move = move.Unit
+			end
+
+			local root = flyVelocity.Parent
+			flyVelocity.Velocity = move * flySpeedValue
+			flyGyro.CFrame = CFrame.new(root.Position, root.Position + camera.CFrame.LookVector)
+		end
+	end
+end)
+
+-- =========================================================
+-- Fullbright
+-- =========================================================
+
+local lightingBackup
+
+local FullbrightProps = {
+	"Ambient",
+	"OutdoorAmbient",
+	"Brightness",
+	"ClockTime",
+	"GlobalShadows",
+	"FogEnd",
+	"FogStart",
+	"ExposureCompensation",
+}
+
+local function applyFullbright()
+	if lightingBackup then
+		return
+	end
+
+	lightingBackup = {}
+	for _, prop in ipairs(FullbrightProps) do
+		lightingBackup[prop] = Lighting[prop]
+	end
+
+	Lighting.Ambient = Color3.fromRGB(255, 255, 255)
+	Lighting.OutdoorAmbient = Color3.fromRGB(255, 255, 255)
+	Lighting.Brightness = 2
+	Lighting.ClockTime = 12
+	Lighting.GlobalShadows = false
+	Lighting.FogEnd = 100000
+	Lighting.FogStart = 0
+	Lighting.ExposureCompensation = 0
+end
+
+local function removeFullbright()
+	if not lightingBackup then
+		return
+	end
+	for prop, value in pairs(lightingBackup) do
+		Lighting[prop] = value
+	end
+	lightingBackup = nil
+end
+
+Toggles.Fullbright:OnChanged(function(Value)
+	if Value then
+		applyFullbright()
+	else
+		removeFullbright()
+	end
+end)
+
+-- =========================================================
+-- Anti-Eyes
+--
+-- Looking at Eyes damages you, so while enabled we (1) stop the Eyes parts
+-- from being raycast/touched and (2) force the camera to look away whenever
+-- Eyes is in view. Refine once the Eyes script is provided.
+-- =========================================================
+
+local antiEyesEnabled = false
+local antiEyesSaved = {}
+local antiEyesConnection
+local AntiEyesRenderName = "mspaint_anti_eyes"
+local AntiEyesAngle = math.rad(35)
+
+local function getEyesPart()
+	local eyes = Workspace:FindFirstChild("Eyes", true)
+	if not eyes then
+		return nil
+	end
+	if eyes:IsA("BasePart") then
+		return eyes
+	end
+	if eyes:IsA("Model") then
+		return eyes.PrimaryPart or eyes:FindFirstChildWhichIsA("BasePart", true)
+	end
+	return nil
+end
+
+local function neutralizeEyesPart(part)
+	if not part:IsA("BasePart") then
+		return
+	end
+
+	if antiEyesSaved[part] == nil then
+		antiEyesSaved[part] = {
+			Transparency = part.Transparency,
+			CanCollide = part.CanCollide,
+			CanTouch = part.CanTouch,
+			CanQuery = part.CanQuery,
+		}
+	end
+
+	part.Transparency = 1
+	part.CanCollide = false
+	part.CanTouch = false
+	part.CanQuery = false
+end
+
+local function applyAntiEyes(inst)
+	if not antiEyesEnabled or not inst then
+		return
+	end
+
+	if inst:IsA("BasePart") then
+		neutralizeEyesPart(inst)
+	end
+
+	for _, descendant in ipairs(inst:GetDescendants()) do
+		if descendant:IsA("BasePart") then
+			neutralizeEyesPart(descendant)
+		end
+	end
+end
+
+local function restoreAntiEyes()
+	for part, data in pairs(antiEyesSaved) do
+		if part and part.Parent then
+			part.Transparency = data.Transparency
+			part.CanCollide = data.CanCollide
+			part.CanTouch = data.CanTouch
+			part.CanQuery = data.CanQuery
+		end
+	end
+	table.clear(antiEyesSaved)
+end
+
+local function stopAntiEyes()
+	if antiEyesConnection then
+		antiEyesConnection:Disconnect()
+		antiEyesConnection = nil
+	end
+
+	pcall(function()
+		RunService:UnbindFromRenderStep(AntiEyesRenderName)
+	end)
+
+	restoreAntiEyes()
+end
+
+local function antiEyesStep()
+	if not antiEyesEnabled then
+		return
+	end
+
+	local eyesPart = getEyesPart()
+	local camera = Workspace.CurrentCamera
+	if not eyesPart or not camera then
+		return
+	end
+
+	local camPos = camera.CFrame.Position
+	local toEyes = eyesPart.Position - camPos
+	if toEyes.Magnitude < 0.01 then
+		return
+	end
+
+	local direction = toEyes.Unit
+	if camera.CFrame.LookVector:Dot(direction) > math.cos(AntiEyesAngle) then
+		camera.CFrame = CFrame.new(camPos, camPos - direction)
+	end
+end
+
+local function startAntiEyes()
+	stopAntiEyes()
+
+	applyAntiEyes(Workspace:FindFirstChild("Eyes", true))
+
+	antiEyesConnection = Workspace.DescendantAdded:Connect(function(descendant)
+		if antiEyesEnabled and descendant.Name == "Eyes" then
+			applyAntiEyes(descendant)
+		end
+	end)
+
+	RunService:BindToRenderStep(AntiEyesRenderName, Enum.RenderPriority.Camera.Value + 1, antiEyesStep)
+end
+
+Toggles.AntiEyes:OnChanged(function(Value)
+	antiEyesEnabled = Value
+	if Value then
+		startAntiEyes()
+	else
+		stopAntiEyes()
+	end
+end)
+
+-- =========================================================
+-- Avoid Entities
+--
+-- While an entity is spawned, keep teleporting you 1000 studs away from where
+-- you were; once nothing is spawned, teleport back to that spot.
+-- =========================================================
+
+local avoidEntitiesEnabled = false
+local avoidEntitiesConnection
+local avoidActive = false
+local avoidReturnPosition
+local avoidEscapePosition
+local lastSafePosition
+
+local function getRootPart()
+	local character = LocalPlayer.Character
+	if character then
+		return character:FindFirstChild("HumanoidRootPart")
+	end
+	return nil
+end
+
+local function getSpawnedEntity()
+	for _, name in ipairs(AvoidEntityNames) do
+		local entity = Workspace:FindFirstChild(name, true)
+		if entity then
+			return entity
+		end
+	end
+	return nil
+end
+
+local function getEntityPosition(entity)
+	if entity:IsA("BasePart") then
+		return entity.Position
+	end
+	if entity:IsA("Model") then
+		local part = entity.PrimaryPart or entity:FindFirstChildWhichIsA("BasePart", true)
+		return part and part.Position or nil
+	end
+	return nil
+end
+
+local function avoidEntitiesStep()
+	if not avoidEntitiesEnabled then
+		return
+	end
+
+	local root = getRootPart()
+	if not root then
+		return
+	end
+
+	local entity = getSpawnedEntity()
+
+	if entity then
+		if not avoidActive then
+			avoidActive = true
+			avoidReturnPosition = lastSafePosition or root.Position
+
+			local entityPosition = getEntityPosition(entity)
+			local direction = entityPosition and (root.Position - entityPosition) or Vector3.new(0, 0, 1)
+			if direction.Magnitude < 1 then
+				direction = Vector3.new(0, 0, 1)
+			end
+
+			avoidEscapePosition = avoidReturnPosition + direction.Unit * 1000
+		end
+
+		root.CFrame = CFrame.new(avoidEscapePosition)
+		root.AssemblyLinearVelocity = Vector3.zero
+	else
+		if avoidActive then
+			avoidActive = false
+			if avoidReturnPosition then
+				root.CFrame = CFrame.new(avoidReturnPosition)
+				root.AssemblyLinearVelocity = Vector3.zero
+			end
+			avoidReturnPosition = nil
+			avoidEscapePosition = nil
+		end
+
+		lastSafePosition = root.Position
+	end
+end
+
+local function stopAvoidEntities()
+	if avoidEntitiesConnection then
+		avoidEntitiesConnection:Disconnect()
+		avoidEntitiesConnection = nil
+	end
+	avoidActive = false
+	avoidReturnPosition = nil
+	avoidEscapePosition = nil
+end
+
+local function startAvoidEntities()
+	stopAvoidEntities()
+	avoidEntitiesConnection = RunService.Heartbeat:Connect(avoidEntitiesStep)
+end
+
+local voidForcedByAvoid = false
+
+Toggles.AvoidEntities:OnChanged(function(Value)
+	avoidEntitiesEnabled = Value
+
+	if Value then
+		startAvoidEntities()
+
+		if not Toggles.DisableVoidEffect.Value then
+			voidForcedByAvoid = true
+			Toggles.DisableVoidEffect:SetValue(true)
+		end
+	else
+		stopAvoidEntities()
+
+		if voidForcedByAvoid then
+			voidForcedByAvoid = false
+			Toggles.DisableVoidEffect:SetValue(false)
+		end
+	end
+end)
+
+-- =========================================================
+-- Void effect
+--
+-- Every few seconds the game distorts the screen and plays a sound. While
+-- enabled we keep the post-processing effects neutralized and stop any
+-- "void" sound. Refine once the exact effect/sound names are known.
+-- =========================================================
+
+local voidEffectEnabled = false
+local voidEffectConnection
+local VoidSoundName = "void"
+
+local VoidEffectResets = {
+	BlurEffect = function(effect)
+		effect.Size = 0
+	end,
+	ColorCorrectionEffect = function(effect)
+		effect.Brightness = 0
+		effect.Contrast = 0
+		effect.Saturation = 0
+		effect.TintColor = Color3.fromRGB(255, 255, 255)
+	end,
+	DepthOfFieldEffect = function(effect)
+		effect.FarIntensity = 0
+		effect.FocusDistance = 0
+		effect.InFocusRadius = 0
+		effect.NearIntensity = 0
+	end,
+	SunRaysEffect = function(effect)
+		effect.Intensity = 0
+	end,
+}
+
+local function voidSoundContainers()
+	local containers = { SoundService }
+
+	local playerGui = LocalPlayer:FindFirstChildOfClass("PlayerGui")
+	if playerGui then
+		table.insert(containers, playerGui)
+	end
+
+	local playerScripts = LocalPlayer:FindFirstChild("PlayerScripts")
+	if playerScripts then
+		table.insert(containers, playerScripts)
+	end
+
+	return containers
+end
+
+local function suppressVoidEffect()
+	for _, child in ipairs(Lighting:GetChildren()) do
+		local reset = VoidEffectResets[child.ClassName]
+		if reset then
+			reset(child)
+		end
+	end
+
+	for _, container in ipairs(voidSoundContainers()) do
+		for _, descendant in ipairs(container:GetDescendants()) do
+			if descendant:IsA("Sound") and descendant.Name:lower():find(VoidSoundName) then
+				pcall(function()
+					descendant:Stop()
+				end)
+			end
+		end
+	end
+end
+
+local function stopVoidEffect()
+	if voidEffectConnection then
+		voidEffectConnection:Disconnect()
+		voidEffectConnection = nil
+	end
+end
+
+local function startVoidEffect()
+	stopVoidEffect()
+	suppressVoidEffect()
+	voidEffectConnection = RunService.Heartbeat:Connect(suppressVoidEffect)
+end
+
+Toggles.DisableVoidEffect:OnChanged(function(Value)
+	voidEffectEnabled = Value
+	if Value then
+		startVoidEffect()
+	else
+		stopVoidEffect()
+	end
+end)
+
+-- =========================================================
+-- Auto interact
+--
+-- Fires ProximityPrompts / ClickDetectors inside AddedAssets so you loot
+-- lockers, tables, etc. The hide lockers are skipped.
+-- =========================================================
+
+local autoInteractEnabled = false
+local autoInteractConnection
+local autoInteractCooldowns = {}
+local autoInteractAccumulator = 0
+local AutoInteractCooldown = 1
+local AutoInteractInterval = 0.2
+local AutoInteractRange = 60
+
+local function isLockerInteraction(inst)
+	local current = inst
+	while current and current ~= Workspace do
+		if current.Name == "Locker" then
+			return true
+		end
+		current = current.Parent
+	end
+	return false
+end
+
+local function triggerPrompt(prompt)
+	if type(fireproximityprompt) == "function" then
+		pcall(fireproximityprompt, prompt)
+		return
+	end
+
+	task.spawn(function()
+		prompt:InputHoldBegin()
+		if prompt.HoldDuration > 0 then
+			task.wait(prompt.HoldDuration)
+		end
+		prompt:InputHoldEnd()
+	end)
+end
+
+local function fireInteractable(interactable)
+	local adornee = interactable.Parent
+	local position
+	if adornee then
+		if adornee:IsA("BasePart") then
+			position = adornee.Position
+		elseif adornee:IsA("Model") then
+			position = adornee:GetPivot().Position
+		end
+	end
+
+	local root = getRootPart()
+	if position and root and (position - root.Position).Magnitude > AutoInteractRange then
+		return
+	end
+
+	local now = os.clock()
+	local last = autoInteractCooldowns[interactable]
+	if last and now - last < AutoInteractCooldown then
+		return
+	end
+	autoInteractCooldowns[interactable] = now
+
+	if interactable:IsA("ProximityPrompt") then
+		triggerPrompt(interactable)
+	elseif interactable:IsA("ClickDetector") then
+		if type(fireclickdetector) == "function" then
+			pcall(fireclickdetector, interactable)
+		end
+	end
+end
+
+local function autoInteractStep()
+	if not autoInteractEnabled then
+		return
+	end
+
+	local root = getRootPart()
+	if not root then
+		return
+	end
+
+	local generatedRooms = Workspace:FindFirstChild("GeneratedRooms")
+	if not generatedRooms then
+		return
+	end
+
+	for _, room in ipairs(generatedRooms:GetChildren()) do
+		if room.Name:match(RoomNamePattern) then
+			local roomPosition = room:IsA("Model") and room:GetPivot().Position or nil
+			local inRange = true
+			if roomPosition then
+				inRange = (roomPosition - root.Position).Magnitude <= 200
+			end
+
+			local addedAssets = inRange and room:FindFirstChild("AddedAssets") or nil
+			if addedAssets then
+				for _, descendant in ipairs(addedAssets:GetDescendants()) do
+					if descendant:IsA("ProximityPrompt") then
+						if descendant.Enabled and not isLockerInteraction(descendant) then
+							fireInteractable(descendant)
+						end
+					elseif descendant:IsA("ClickDetector") then
+						if not isLockerInteraction(descendant) then
+							fireInteractable(descendant)
+						end
+					end
+				end
+			end
+		end
+	end
+end
+
+local function stopAutoInteract()
+	if autoInteractConnection then
+		autoInteractConnection:Disconnect()
+		autoInteractConnection = nil
+	end
+	table.clear(autoInteractCooldowns)
+end
+
+local function startAutoInteract()
+	stopAutoInteract()
+	autoInteractAccumulator = 0
+	autoInteractConnection = RunService.Heartbeat:Connect(function(deltaTime)
+		autoInteractAccumulator = autoInteractAccumulator + deltaTime
+		if autoInteractAccumulator < AutoInteractInterval then
+			return
+		end
+		autoInteractAccumulator = 0
+		autoInteractStep()
+	end)
+end
+
+Toggles.AutoInteract:OnChanged(function(Value)
+	autoInteractEnabled = Value
+	if Value then
+		startAutoInteract()
+	else
+		stopAutoInteract()
+	end
+end)
+
+-- =========================================================
+-- Debug
+-- =========================================================
+
+local logEntitySpawnsEnabled = false
+local logRaycastsEnabled = false
+local showRaycastsEnabled = false
+local raycastVisuals = {}
+
+local RayVisualFolder = Instance.new("Folder")
+RayVisualFolder.Name = "mspaint_raycasts"
+RayVisualFolder.Parent = EspFolder
+
+local function debugPrint(...)
+	print("[mspaint debug]", ...)
+end
+
+local function clearRaycastVisuals()
+	for _, visual in ipairs(raycastVisuals) do
+		if visual and visual.Parent then
+			visual:Destroy()
+		end
+	end
+	table.clear(raycastVisuals)
+end
+
+local function createRaycastVisual(origin, direction)
+	local length = direction.Magnitude
+	if length < 0.01 then
+		return
+	end
+
+	if #raycastVisuals >= 300 then
+		local oldest = table.remove(raycastVisuals, 1)
+		if oldest then
+			oldest:Destroy()
+		end
+	end
+
+	local visual = Instance.new("Part")
+	visual.Anchored = true
+	visual.CanCollide = false
+	visual.CanQuery = false
+	visual.CanTouch = false
+	visual.CastShadow = false
+	visual.Material = Enum.Material.Neon
+	visual.Color = Color3.fromRGB(255, 90, 90)
+	visual.Size = Vector3.new(0.05, 0.05, length)
+	visual.CFrame = CFrame.lookAt(origin + direction * 0.5, origin + direction)
+	visual.Parent = RayVisualFolder
+
+	table.insert(raycastVisuals, visual)
+
+	task.delay(Options.RaycastVisualTime.Value, function()
+		if visual and visual.Parent then
+			visual:Destroy()
+		end
+	end)
+end
+
+Workspace.DescendantAdded:Connect(function(descendant)
+	if not logEntitySpawnsEnabled then
+		return
+	end
+
+	for _, name in ipairs(EntityNames) do
+		if descendant.Name == name then
+			local part = descendant
+			if descendant:IsA("Model") then
+				part = descendant.PrimaryPart or descendant:FindFirstChildWhichIsA("BasePart", true)
+			end
+
+			local position = part and part:IsA("BasePart") and tostring(part.Position) or "?"
+			debugPrint("entity spawned:", name, "at", position)
+			return
+		end
+	end
+end)
+
+local originalNamecall
+if type(hookmetamethod) == "function" and type(getnamecallmethod) == "function" then
+	local function raycastHook(self, ...)
+		if (showRaycastsEnabled or logRaycastsEnabled) and getnamecallmethod() == "Raycast" then
+			local origin, direction = ...
+			if typeof(origin) == "Vector3" and typeof(direction) == "Vector3" then
+				if showRaycastsEnabled then
+					createRaycastVisual(origin, direction)
+				end
+				if logRaycastsEnabled then
+					debugPrint("raycast", tostring(origin), "->", tostring(direction))
+				end
+			end
+		end
+
+		return originalNamecall(self, ...)
+	end
+
+	if type(newcclosure) == "function" then
+		raycastHook = newcclosure(raycastHook)
+	end
+
+	originalNamecall = hookmetamethod(game, "__namecall", raycastHook)
+end
+
+Toggles.LogEntitySpawns:OnChanged(function(Value)
+	logEntitySpawnsEnabled = Value
+end)
+
+Toggles.LogRaycasts:OnChanged(function(Value)
+	logRaycastsEnabled = Value
+end)
+
+Toggles.ShowRaycasts:OnChanged(function(Value)
+	showRaycastsEnabled = Value
+	if not Value then
+		clearRaycastVisuals()
+	end
+end)
+
+-- =========================================================
+-- Autoplay
+-- =========================================================
+
+local autoplayEnabled = false
+local autoplayLastRoom = 0
+
+local function doorRoomNumber(door)
+	local current = door
+	while current and current ~= Workspace do
+		if current.Name:match(RoomNamePattern) then
+			local number = tonumber(current.Name:match("%d+"))
+			if number then
+				return number
+			end
+		end
+		current = current.Parent
+	end
+	return nil
+end
+
+local function doorPosition(door)
+	if door:IsA("BasePart") then
+		return door.Position
+	end
+	if door:IsA("Model") then
+		return door:GetPivot().Position
+	end
+	return nil
+end
+
+local function playerRoomNumber()
+	local root = getRootPart()
+	if not root then
+		return nil
+	end
+
+	local generatedRooms = Workspace:FindFirstChild("GeneratedRooms")
+	if not generatedRooms then
+		return nil
+	end
+
+	for _, room in ipairs(generatedRooms:GetChildren()) do
+		local number = room.Name:match(RoomNamePattern) and tonumber(room.Name:match("%d+"))
+		if number then
+			local ok, boxCFrame, boxSize = pcall(function()
+				return room:GetBoundingBox()
+			end)
+			if ok and boxCFrame then
+				local localPosition = boxCFrame:PointToObjectSpace(root.Position)
+				if math.abs(localPosition.X) <= boxSize.X / 2 + 5 and math.abs(localPosition.Z) <= boxSize.Z / 2 + 5 then
+					return number
+				end
+			end
+		end
+	end
+
+	return nil
+end
+
+local function findDoorByRoom(roomNumber)
+	for _, door in ipairs(collectDoors()) do
+		if doorRoomNumber(door) == roomNumber then
+			return door
+		end
+	end
+	return nil
+end
+
+local function fireInteractablesIn(container, onlyDoorNamed)
+	for _, descendant in ipairs(container:GetDescendants()) do
+		local relevant = not onlyDoorNamed or descendant.Name:lower():find("door") ~= nil
+		if relevant and descendant:IsA("ProximityPrompt") and descendant.Enabled then
+			triggerPrompt(descendant)
+		elseif relevant and descendant:IsA("ClickDetector") then
+			if type(fireclickdetector) == "function" then
+				pcall(fireclickdetector, descendant)
+			end
+		end
+	end
+end
+
+local function openDoor(door)
+	fireInteractablesIn(door, false)
+	if door.Parent then
+		fireInteractablesIn(door.Parent, true)
+	end
+end
+
+local function findNearestLocker()
+	local root = getRootPart()
+	if not root then
+		return nil
+	end
+
+	local best
+	local bestDistance
+	for _, locker in ipairs(collectLockers()) do
+		local position = getWorldPosition(locker)
+		local distance = (position - root.Position).Magnitude
+		if not bestDistance or distance < bestDistance then
+			best = locker
+			bestDistance = distance
+		end
+	end
+
+	return best
+end
+
+local function autoplayStep()
+	-- Hide in a locker while Rush / Ram are active
+	local entity = getSpawnedEntity()
+	if entity then
+		local locker = findNearestLocker()
+		local root = getRootPart()
+		if locker and root then
+			root.CFrame = CFrame.new(getWorldPosition(locker))
+		end
+		return
+	end
+
+	local room = playerRoomNumber()
+	if room then
+		autoplayLastRoom = math.max(autoplayLastRoom, room)
+	end
+
+	local door = findDoorByRoom(autoplayLastRoom + 1)
+	if not door then
+		return
+	end
+
+	local root = getRootPart()
+	local position = doorPosition(door)
+	if not root or not position then
+		return
+	end
+
+	root.CFrame = CFrame.new(position + Vector3.new(0, 3, 0))
+	openDoor(door)
+end
+
+local function startAutoplay()
+	task.spawn(function()
+		while autoplayEnabled and not Library.Unloaded do
+			pcall(autoplayStep)
+			task.wait(Options.AutoplayDelay.Value)
+		end
+	end)
+end
+
+Toggles.Autoplay:OnChanged(function(Value)
+	autoplayEnabled = Value
+	if Value then
+		autoplayLastRoom = 0
+		startAutoplay()
+	end
+end)
+
+-- =========================================================
+-- Execute on Teleport
+-- =========================================================
+
+local function queueExecuteOnTeleport()
+	local loader = ExecuteOnTeleportLoader
+	if loader == "" then
+		Library:Notify({
+			Title = "Execute on Teleport",
+			Description = "Set the Teleport Loader first.",
+			Icon = "triangle-alert",
+			Time = 5,
+		})
+		return false
+	end
+
+	if type(queue_on_teleport) ~= "function" then
+		Library:Notify({
+			Title = "Execute on Teleport",
+			Description = "queue_on_teleport is not supported by this executor.",
+			Icon = "triangle-alert",
+			Time = 5,
+		})
+		return false
+	end
+
+	queue_on_teleport(loader)
+	Library:Notify({
+		Title = "Execute on Teleport",
+		Description = "Queued. It will run after you teleport.",
+		Time = 5,
+	})
+	return true
+end
+
+-- =========================================================
+-- Main loop
+-- =========================================================
+
+local doorEspEnabled = false
+local entityEspEnabled = false
+local lockerEspEnabled = false
+local playerEspEnabled = false
+local minecartEspEnabled = false
+local objectiveEspEnabled = false
+local notifySelections = { Rush = true }
+
+Toggles.DoorESP:OnChanged(function(Value)
+	doorEspEnabled = Value
+end)
+
+Toggles.EntityESP:OnChanged(function(Value)
+	entityEspEnabled = Value
+end)
+
+Toggles.LockerESP:OnChanged(function(Value)
+	lockerEspEnabled = Value
+end)
+
+Toggles.PlayerESP:OnChanged(function(Value)
+	playerEspEnabled = Value
+end)
+
+Toggles.MinecartESP:OnChanged(function(Value)
+	minecartEspEnabled = Value
+end)
+
+Toggles.ObjectiveESP:OnChanged(function(Value)
+	objectiveEspEnabled = Value
+end)
+
+Options.EntityESPFilter:OnChanged(function(Value)
+	entityEspSelections = Value or {}
+end)
+
+Options.EntityESPFilter:SetValue({
+	Rush = true,
+	Ram = true,
+	Stare = true,
+	Eyes = true,
+	Peakaboo = true,
+	Hisoka = true,
+	Ambush = true,
+})
+
+-- =========================================================
+-- Spawn notifier
+-- =========================================================
+
+local NotifyCooldown = 3
+local lastNotifyAt = {}
+
+local function notifyEntity(name)
+	if not notifySelections[name] then
+		return
+	end
+
+	local now = os.clock()
+	if now - (lastNotifyAt[name] or -math.huge) < NotifyCooldown then
+		return
+	end
+	lastNotifyAt[name] = now
+
+	Library:Notify({
+		Title = "Entity Spawned",
+		Description = name .. " has spawned!",
+		Icon = "triangle-alert",
+		Time = 6,
+	})
+end
+
+Options.NotifierEntities:OnChanged(function(Value)
+	notifySelections = Value or {}
+end)
+
+-- Rush (and anything else in EntityNames) spawns in the workspace
+Workspace.DescendantAdded:Connect(function(descendant)
+	for _, name in ipairs(EntityNames) do
+		if descendant.Name == name then
+			notifyEntity(name)
+			break
+		end
+	end
+end)
+
+-- Screech spawns inside the camera as a Model
+local cameraConnection
+
+local function bindCameraNotifier()
+	if cameraConnection then
+		cameraConnection:Disconnect()
+		cameraConnection = nil
+	end
+
+	local camera = Workspace.CurrentCamera
+	if camera then
+		cameraConnection = camera.ChildAdded:Connect(function(child)
+			if child:IsA("Model") and child.Name:lower() == "model" then
+				notifyEntity("Screech")
+			end
+		end)
+	end
+end
+
+bindCameraNotifier()
+Workspace:GetPropertyChangedSignal("CurrentCamera"):Connect(bindCameraNotifier)
+
+task.spawn(function()
+	while not Library.Unloaded do
+		local doorColor = Options.DoorESPColor.Value
+		local entityColor = Options.EntityESPColor.Value
+		local lockerColor = Options.LockerESPColor.Value
+		local playerColor = Options.PlayerESPColor.Value
+		local objectiveColor = Options.ObjectiveESPColor.Value
+
+		updateSet(doorCache, collectDoors(), doorEspEnabled, doorColor, function()
+			return "Door"
+		end)
+
+		updateSet(entityCache, collectEntities(), entityEspEnabled, entityColor, entityDisplayName)
+
+		updateSet(lockerCache, collectLockers(), lockerEspEnabled, lockerColor, function()
+			return "Locker"
+		end)
+
+		updateSet(playerCache, collectPlayers(), playerEspEnabled, playerColor, function(target)
+			return target.Name
+		end)
+
+		updateSet(objectiveCache, collectObjectives(), objectiveEspEnabled, objectiveColor, function()
+			return "Objective"
+		end)
+
+		updateMinecartEsp(minecartEspEnabled, Options.MinecartESPColor.Value)
+
+		task.wait(0.1)
+	end
+
+	for _, entry in pairs(doorCache) do
+		destroyEntry(entry)
+	end
+	for _, entry in pairs(entityCache) do
+		destroyEntry(entry)
+	end
+	for _, entry in pairs(lockerCache) do
+		destroyEntry(entry)
+	end
+	for _, entry in pairs(playerCache) do
+		destroyEntry(entry)
+	end
+	for _, entry in pairs(objectiveCache) do
+		destroyEntry(entry)
+	end
+	clearAllMinecarts()
+end)
+
+Library:OnUnload(function()
+	if movementConnection then
+		movementConnection:Disconnect()
+	end
+	if cameraConnection then
+		cameraConnection:Disconnect()
+	end
+	stopFly()
+	restoreNoclip()
+	removeFullbright()
+	stopAntiEyes()
+	stopAvoidEntities()
+	stopVoidEffect()
+	stopAutoInteract()
+	clearRaycastVisuals()
+	if originalNamecall and type(hookmetamethod) == "function" then
+		pcall(function()
+			hookmetamethod(game, "__namecall", originalNamecall)
+		end)
+	end
+	clearAllMinecarts()
+	if EspFolder then
+		EspFolder:Destroy()
+	end
+	local camera = Workspace.CurrentCamera
+	if camera then
+		camera.FieldOfView = initialFov
+	end
+end)
+
+-- =========================================================
+-- UI Settings
+-- =========================================================
+
+local MenuGroup = Tabs["UI Settings"]:AddGroupbox({
+	Side = "Left",
+	Name = "Menu",
+	IconName = "wrench",
+})
+
+MenuGroup:AddToggle("CustomCursor", {
+	Text = "Custom Cursor",
+	Default = Library.ShowCustomCursor,
+	Tooltip = "Off = regular Roblox mouse",
+	Callback = function(Value)
+		Library.ShowCustomCursor = Value
+	end,
+})
+
+MenuGroup:AddDivider()
+
+MenuGroup:AddInput("TeleportLoader", {
+	Text = "Teleport Loader",
+	Default = ExecuteOnTeleportLoader,
+	Placeholder = 'loadstring(game:HttpGet("..."))()',
+	Finished = false,
+	Tooltip = "Script that runs after you teleport",
+	Callback = function(Value)
+		ExecuteOnTeleportLoader = Value
+	end,
+})
+
+MenuGroup:AddToggle("ExecuteOnTeleport", {
+	Text = "Execute on Teleport",
+	Default = false,
+	Tooltip = "Queues the Teleport Loader to run after teleporting",
+	Callback = function(Value)
+		if Value and not queueExecuteOnTeleport() then
+			Toggles.ExecuteOnTeleport:SetValue(false)
+		end
+	end,
+})
+
+MenuGroup:AddDivider()
+
+MenuGroup:AddButton("Unload", function()
+	Library:Unload()
+end)
+
+MenuGroup:AddDivider()
+MenuGroup:AddLabel("Menu bind"):AddKeyPicker("MenuKeybind", {
+	Default = "RightShift",
+	NoUI = true,
+	Text = "Menu keybind",
+})
+
+Library.ToggleKeybind = Options.MenuKeybind
+
+ThemeManager:SetLibrary(Library)
+SaveManager:SetLibrary(Library)
+SaveManager:IgnoreThemeSettings()
+SaveManager:SetIgnoreIndexes({ "MenuKeybind" })
+ThemeManager:SetFolder("AnticheatTest")
+SaveManager:SetFolder("AnticheatTest/my-game")
+SaveManager:BuildConfigSection(Tabs["UI Settings"])
+ThemeManager:ApplyToTab(Tabs["UI Settings"])
+SaveManager:LoadAutoloadConfig()
