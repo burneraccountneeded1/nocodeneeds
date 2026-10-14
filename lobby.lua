@@ -13,6 +13,110 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local LobbyPlaceId = 18186775539
 local MainPlaceId = 77614252294790
 
+local StarterGui = game:GetService("StarterGui")
+local LocalPlayer = game:GetService("Players").LocalPlayer
+
+-- =========================================================
+-- Loading overlay
+-- =========================================================
+
+local loadingGui
+local loadingStatusLabel
+local loadingFill
+
+local function setupLoadingGui()
+	local parent = (type(gethui) == "function" and gethui()) or LocalPlayer:WaitForChild("PlayerGui")
+
+	loadingGui = Instance.new("ScreenGui")
+	loadingGui.Name = "mspaint_loading"
+	loadingGui.IgnoreGuiInset = true
+	loadingGui.ResetOnSpawn = false
+	loadingGui.DisplayOrder = 2000
+	loadingGui.Parent = parent
+
+	local frame = Instance.new("Frame")
+	frame.Size = UDim2.new(0, 360, 0, 96)
+	frame.Position = UDim2.new(0.5, 0, 0.5, 0)
+	frame.AnchorPoint = Vector2.new(0.5, 0.5)
+	frame.BackgroundColor3 = Color3.fromRGB(18, 18, 22)
+	frame.BorderSizePixel = 0
+	frame.Parent = loadingGui
+
+	local frameCorner = Instance.new("UICorner")
+	frameCorner.CornerRadius = UDim.new(0, 10)
+	frameCorner.Parent = frame
+
+	local title = Instance.new("TextLabel")
+	title.BackgroundTransparency = 1
+	title.Size = UDim2.new(1, -24, 0, 26)
+	title.Position = UDim2.new(0, 12, 0, 12)
+	title.Font = Enum.Font.GothamBold
+	title.TextSize = 18
+	title.TextXAlignment = Enum.TextXAlignment.Left
+	title.TextColor3 = Color3.fromRGB(235, 235, 240)
+	title.Text = "mspaint"
+	title.Parent = frame
+
+	loadingStatusLabel = Instance.new("TextLabel")
+	loadingStatusLabel.BackgroundTransparency = 1
+	loadingStatusLabel.Size = UDim2.new(1, -24, 0, 18)
+	loadingStatusLabel.Position = UDim2.new(0, 12, 0, 40)
+	loadingStatusLabel.Font = Enum.Font.Gotham
+	loadingStatusLabel.TextSize = 14
+	loadingStatusLabel.TextXAlignment = Enum.TextXAlignment.Left
+	loadingStatusLabel.TextColor3 = Color3.fromRGB(165, 165, 175)
+	loadingStatusLabel.Text = "starting"
+	loadingStatusLabel.Parent = frame
+
+	local bar = Instance.new("Frame")
+	bar.Size = UDim2.new(1, -24, 0, 6)
+	bar.Position = UDim2.new(0, 12, 1, -18)
+	bar.BackgroundColor3 = Color3.fromRGB(40, 40, 48)
+	bar.BorderSizePixel = 0
+	bar.Parent = frame
+
+	local barCorner = Instance.new("UICorner")
+	barCorner.CornerRadius = UDim.new(1, 0)
+	barCorner.Parent = bar
+
+	loadingFill = Instance.new("Frame")
+	loadingFill.Size = UDim2.new(0, 4, 1, 0)
+	loadingFill.BackgroundColor3 = Color3.fromRGB(0, 170, 255)
+	loadingFill.BorderSizePixel = 0
+	loadingFill.Parent = bar
+
+	local fillCorner = Instance.new("UICorner")
+	fillCorner.CornerRadius = UDim.new(1, 0)
+	fillCorner.Parent = loadingFill
+end
+
+local function loadingStatus(text, progress)
+	if loadingStatusLabel then
+		loadingStatusLabel.Text = text
+	end
+	if loadingFill and progress then
+		loadingFill.Size = UDim2.new(math.clamp(progress, 0, 1), 0, 1, 0)
+	end
+	print("[mspaint] " .. text)
+	pcall(function()
+		StarterGui:SetCore("SendNotification", {
+			Title = "mspaint",
+			Text = text,
+			Duration = 3,
+		})
+	end)
+end
+
+local function finishLoading()
+	if loadingGui then
+		loadingGui:Destroy()
+		loadingGui = nil
+	end
+end
+
+setupLoadingGui()
+loadingStatus("loading library", 0.1)
+
 local Window = Library:CreateWindow({
 	Title = "mspaint",
 	Footer = "lobby",
@@ -24,10 +128,12 @@ local Tabs = {
 	Lobby = Window:AddTab("Lobby", "building"),
 	["UI Settings"] = Window:AddTab("UI Settings", "settings"),
 }
+loadingStatus("loading interface", 0.25)
 
 -- =========================================================
 -- Logic
 -- =========================================================
+loadingStatus("loading logic", 0.4)
 
 local joinQueued = false
 
@@ -118,6 +224,8 @@ Library:OnUnload(function()
 	joinQueued = false
 end)
 
+loadingStatus("loading elevator", 0.6)
+
 -- =========================================================
 -- Elevator creation
 -- =========================================================
@@ -181,6 +289,8 @@ ElevatorGroupbox:AddButton({
 	end,
 })
 
+loadingStatus("loading game", 0.75)
+
 -- =========================================================
 -- Game
 -- =========================================================
@@ -201,6 +311,8 @@ GameGroupbox:AddButton({
 		joinMainGame()
 	end,
 })
+
+loadingStatus("loading settings", 0.9)
 
 -- =========================================================
 -- UI Settings
@@ -245,3 +357,6 @@ SaveManager:SetFolder("AnticheatTest/lobby")
 SaveManager:BuildConfigSection(Tabs["UI Settings"])
 ThemeManager:ApplyToTab(Tabs["UI Settings"])
 SaveManager:LoadAutoloadConfig()
+
+loadingStatus("ready", 1)
+task.delay(0.4, finishLoading)

@@ -12,6 +12,7 @@ local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
 local Lighting = game:GetService("Lighting")
 local SoundService = game:GetService("SoundService")
+local StarterGui = game:GetService("StarterGui")
 
 local LocalPlayer = Players.LocalPlayer
 
@@ -31,8 +32,110 @@ end
 local ExecuteOnTeleportLoader = 'loadstring(game:HttpGet("https://raw.githubusercontent.com/burneraccountneeded1/nocodeneeds/refs/heads/main/main.lua"))()'
 
 -- =========================================================
+-- Loading overlay
+-- =========================================================
+
+local loadingGui
+local loadingStatusLabel
+local loadingFill
+
+local function setupLoadingGui()
+	local parent = (type(gethui) == "function" and gethui()) or LocalPlayer:WaitForChild("PlayerGui")
+
+	loadingGui = Instance.new("ScreenGui")
+	loadingGui.Name = "mspaint_loading"
+	loadingGui.IgnoreGuiInset = true
+	loadingGui.ResetOnSpawn = false
+	loadingGui.DisplayOrder = 2000
+	loadingGui.Parent = parent
+
+	local frame = Instance.new("Frame")
+	frame.Size = UDim2.new(0, 360, 0, 96)
+	frame.Position = UDim2.new(0.5, 0, 0.5, 0)
+	frame.AnchorPoint = Vector2.new(0.5, 0.5)
+	frame.BackgroundColor3 = Color3.fromRGB(18, 18, 22)
+	frame.BorderSizePixel = 0
+	frame.Parent = loadingGui
+
+	local frameCorner = Instance.new("UICorner")
+	frameCorner.CornerRadius = UDim.new(0, 10)
+	frameCorner.Parent = frame
+
+	local title = Instance.new("TextLabel")
+	title.BackgroundTransparency = 1
+	title.Size = UDim2.new(1, -24, 0, 26)
+	title.Position = UDim2.new(0, 12, 0, 12)
+	title.Font = Enum.Font.GothamBold
+	title.TextSize = 18
+	title.TextXAlignment = Enum.TextXAlignment.Left
+	title.TextColor3 = Color3.fromRGB(235, 235, 240)
+	title.Text = "mspaint"
+	title.Parent = frame
+
+	loadingStatusLabel = Instance.new("TextLabel")
+	loadingStatusLabel.BackgroundTransparency = 1
+	loadingStatusLabel.Size = UDim2.new(1, -24, 0, 18)
+	loadingStatusLabel.Position = UDim2.new(0, 12, 0, 40)
+	loadingStatusLabel.Font = Enum.Font.Gotham
+	loadingStatusLabel.TextSize = 14
+	loadingStatusLabel.TextXAlignment = Enum.TextXAlignment.Left
+	loadingStatusLabel.TextColor3 = Color3.fromRGB(165, 165, 175)
+	loadingStatusLabel.Text = "starting"
+	loadingStatusLabel.Parent = frame
+
+	local bar = Instance.new("Frame")
+	bar.Size = UDim2.new(1, -24, 0, 6)
+	bar.Position = UDim2.new(0, 12, 1, -18)
+	bar.BackgroundColor3 = Color3.fromRGB(40, 40, 48)
+	bar.BorderSizePixel = 0
+	bar.Parent = frame
+
+	local barCorner = Instance.new("UICorner")
+	barCorner.CornerRadius = UDim.new(1, 0)
+	barCorner.Parent = bar
+
+	loadingFill = Instance.new("Frame")
+	loadingFill.Size = UDim2.new(0, 4, 1, 0)
+	loadingFill.BackgroundColor3 = Color3.fromRGB(0, 170, 255)
+	loadingFill.BorderSizePixel = 0
+	loadingFill.Parent = bar
+
+	local fillCorner = Instance.new("UICorner")
+	fillCorner.CornerRadius = UDim.new(1, 0)
+	fillCorner.Parent = loadingFill
+end
+
+local function loadingStatus(text, progress)
+	if loadingStatusLabel then
+		loadingStatusLabel.Text = text
+	end
+	if loadingFill and progress then
+		loadingFill.Size = UDim2.new(math.clamp(progress, 0, 1), 0, 1, 0)
+	end
+	print("[mspaint] " .. text)
+	pcall(function()
+		StarterGui:SetCore("SendNotification", {
+			Title = "mspaint",
+			Text = text,
+			Duration = 3,
+		})
+	end)
+end
+
+local function finishLoading()
+	if loadingGui then
+		loadingGui:Destroy()
+		loadingGui = nil
+	end
+end
+
+setupLoadingGui()
+loadingStatus("loading library", 0.05)
+
+-- =========================================================
 -- Window / Tabs / Groupboxes
 -- =========================================================
+loadingStatus("loading interface", 0.12)
 
 local Window = Library:CreateWindow({
 	Title = "mspaint",
@@ -53,6 +156,7 @@ local Tabs = {
 -- =========================================================
 -- Main tab: movement
 -- =========================================================
+loadingStatus("loading movement", 0.2)
 
 local MovementGroupbox = Tabs.Main:AddGroupbox({
 	Side = "Left",
@@ -113,6 +217,31 @@ MovementGroupbox:AddToggle("Noclip", {
 	Tooltip = "Disables collision on your character",
 })
 
+loadingStatus("loading minecart", 0.26)
+
+local MinecartGroupbox = Tabs.Main:AddGroupbox({
+	Side = "Left",
+	Name = "Minecart",
+	Description = "RoamingCart modifiers",
+	IconName = "train-front",
+})
+
+MinecartGroupbox:AddToggle("MinecartSpeedToggle", {
+	Text = "Minecart Speed",
+	Default = false,
+	Tooltip = "Drives Room###.RoamingCart at the set speed",
+})
+
+MinecartGroupbox:AddSlider("MinecartSpeed", {
+	Text = "Speed",
+	Default = 50,
+	Min = 0,
+	Max = 300,
+	Rounding = 0,
+})
+
+loadingStatus("loading automation", 0.3)
+
 local AutomationGroupbox = Tabs.Main:AddGroupbox({
 	Side = "Right",
 	Name = "Automation",
@@ -137,6 +266,7 @@ AutomationGroupbox:AddSlider("AutoplayDelay", {
 -- =========================================================
 -- Visuals tab: ESP
 -- =========================================================
+loadingStatus("loading visuals & entities", 0.38)
 
 local EspGroupbox = Tabs.Visuals:AddGroupbox({
 	Side = "Left",
@@ -261,6 +391,7 @@ end)
 -- =========================================================
 -- Notifier tab
 -- =========================================================
+loadingStatus("loading notifier", 0.46)
 
 local NotifierGroupbox = Tabs.Notifier:AddGroupbox({
 	Side = "Left",
@@ -280,6 +411,7 @@ NotifierGroupbox:AddDropdown("NotifierEntities", {
 -- =========================================================
 -- Exploit tab
 -- =========================================================
+loadingStatus("loading exploits", 0.52)
 
 local ExploitGroupbox = Tabs.Exploit:AddGroupbox({
 	Side = "Left",
@@ -322,6 +454,7 @@ UtilityGroupbox:AddToggle("AutoInteract", {
 -- =========================================================
 -- Debug tab
 -- =========================================================
+loadingStatus("loading debug", 0.56)
 
 local DebugLogGroupbox = Tabs.Debug:AddGroupbox({
 	Side = "Left",
@@ -366,6 +499,7 @@ DebugRayGroupbox:AddSlider("RaycastVisualTime", {
 -- =========================================================
 -- ESP engine
 -- =========================================================
+loadingStatus("loading esp engine", 0.62)
 
 local EspFolder = Instance.new("Folder")
 EspFolder.Name = "mspaint_esp"
@@ -525,6 +659,8 @@ end
 -- drawn in green while the trunk and the other branches use the ESP color.
 -- =========================================================
 
+loadingStatus("loading minecart esp", 0.66)
+
 local MinecartNodeFolderName = "MinecartNodes"
 local MinecartFallbackFolders = { "Assets", "Necessities", "AddedAssets" }
 local MinecartCorrectColor = Color3.fromRGB(85, 255, 85)
@@ -586,6 +722,11 @@ local function findMinecartNodeContainer(room)
 end
 
 local function findMinecartVehicle(room)
+	local roaming = room:FindFirstChild("RoamingCart")
+	if roaming and isEspTarget(roaming) then
+		return roaming
+	end
+
 	local roots = {
 		room:FindFirstChild("Scriptable"),
 		room:FindFirstChild("Assets"),
@@ -852,8 +993,104 @@ local function updateMinecartEsp(enabled, color)
 end
 
 -- =========================================================
+-- Minecart speed
+-- =========================================================
+
+local cartSpeedEnabled = false
+local cartSpeedConnection
+local cartAttachment
+local cartVelocity
+
+local function findRoamingCart()
+	local generatedRooms = Workspace:FindFirstChild("GeneratedRooms")
+	if not generatedRooms then
+		return nil
+	end
+
+	for _, room in ipairs(generatedRooms:GetChildren()) do
+		if room.Name:match(RoomNamePattern) then
+			local cart = room:FindFirstChild("RoamingCart")
+			if cart and isEspTarget(cart) then
+				return cart
+			end
+		end
+	end
+
+	return nil
+end
+
+local function getCartPart(cart)
+	if not cart then
+		return nil
+	end
+	if cart:IsA("BasePart") then
+		return cart
+	end
+	if cart:IsA("Model") then
+		return cart.PrimaryPart or cart:FindFirstChildWhichIsA("BasePart", true)
+	end
+	return nil
+end
+
+local function clearCartVelocity()
+	if cartVelocity then
+		cartVelocity:Destroy()
+		cartVelocity = nil
+	end
+	if cartAttachment then
+		cartAttachment:Destroy()
+		cartAttachment = nil
+	end
+end
+
+local function applyCartSpeed()
+	local part = getCartPart(findRoamingCart())
+	if not part then
+		clearCartVelocity()
+		return
+	end
+
+	local speed = Options.MinecartSpeed.Value
+
+	if not cartVelocity or not cartAttachment or cartAttachment.Parent ~= part then
+		clearCartVelocity()
+		cartAttachment = Instance.new("Attachment")
+		cartAttachment.Parent = part
+		cartVelocity = Instance.new("LinearVelocity")
+		cartVelocity.Attachment0 = cartAttachment
+		cartVelocity.RelativeTo = Enum.ActuatorRelativeTo.World
+		cartVelocity.MaxForce = math.huge
+		cartVelocity.Parent = part
+	end
+
+	local direction = part.CFrame.LookVector
+	cartVelocity.VectorVelocity = direction * speed
+	part.AssemblyLinearVelocity = direction * speed
+end
+
+Toggles.MinecartSpeedToggle:OnChanged(function(Value)
+	cartSpeedEnabled = Value
+	if not Value then
+		clearCartVelocity()
+	end
+end)
+
+Options.MinecartSpeed:OnChanged(function()
+	if cartSpeedEnabled then
+		pcall(applyCartSpeed)
+	end
+end)
+
+cartSpeedConnection = RunService.Heartbeat:Connect(function()
+	if cartSpeedEnabled then
+		pcall(applyCartSpeed)
+	end
+end)
+
+-- =========================================================
 -- Target collection
 -- =========================================================
+loadingStatus("loading entity collection", 0.7)
 
 local function findDoorPart(room)
 	for _, child in ipairs(room:GetChildren()) do
@@ -1006,6 +1243,7 @@ end
 -- =========================================================
 -- Character modifiers
 -- =========================================================
+loadingStatus("loading character modifiers", 0.74)
 
 local walkSpeedEnabled = false
 local walkSpeedValue = 16
@@ -1191,6 +1429,7 @@ end)
 -- =========================================================
 -- Fullbright
 -- =========================================================
+loadingStatus("loading fullbright", 0.78)
 
 local lightingBackup
 
@@ -1242,6 +1481,8 @@ Toggles.Fullbright:OnChanged(function(Value)
 		removeFullbright()
 	end
 end)
+
+loadingStatus("loading anti-eyes", 0.82)
 
 -- =========================================================
 -- Anti-Eyes
@@ -1378,6 +1619,8 @@ Toggles.AntiEyes:OnChanged(function(Value)
 	end
 end)
 
+loadingStatus("loading avoid entities", 0.85)
+
 -- =========================================================
 -- Avoid Entities
 --
@@ -1501,6 +1744,8 @@ Toggles.AvoidEntities:OnChanged(function(Value)
 	end
 end)
 
+loadingStatus("loading void effect", 0.88)
+
 -- =========================================================
 -- Void effect
 --
@@ -1590,6 +1835,8 @@ Toggles.DisableVoidEffect:OnChanged(function(Value)
 		stopVoidEffect()
 	end
 end)
+
+loadingStatus("loading auto interact", 0.9)
 
 -- =========================================================
 -- Auto interact
@@ -1735,6 +1982,8 @@ Toggles.AutoInteract:OnChanged(function(Value)
 	end
 end)
 
+loadingStatus("loading debug handlers", 0.92)
+
 -- =========================================================
 -- Debug
 -- =========================================================
@@ -1853,6 +2102,8 @@ Toggles.ShowRaycasts:OnChanged(function(Value)
 		clearRaycastVisuals()
 	end
 end)
+
+loadingStatus("loading autoplay", 0.93)
 
 -- =========================================================
 -- Autoplay
@@ -2047,6 +2298,8 @@ local function queueExecuteOnTeleport()
 	return true
 end
 
+loadingStatus("starting esp loop", 0.96)
+
 -- =========================================================
 -- Main loop
 -- =========================================================
@@ -2096,6 +2349,8 @@ Options.EntityESPFilter:SetValue({
 	Hisoka = true,
 	Ambush = true,
 })
+
+loadingStatus("loading spawn notifier", 0.97)
 
 -- =========================================================
 -- Spawn notifier
@@ -2215,6 +2470,11 @@ Library:OnUnload(function()
 	if cameraConnection then
 		cameraConnection:Disconnect()
 	end
+	if cartSpeedConnection then
+		cartSpeedConnection:Disconnect()
+		cartSpeedConnection = nil
+	end
+	clearCartVelocity()
 	stopFly()
 	restoreNoclip()
 	removeFullbright()
@@ -2237,6 +2497,8 @@ Library:OnUnload(function()
 		camera.FieldOfView = initialFov
 	end
 end)
+
+loadingStatus("loading settings", 0.98)
 
 -- =========================================================
 -- UI Settings
@@ -2305,3 +2567,6 @@ SaveManager:SetFolder("AnticheatTest/my-game")
 SaveManager:BuildConfigSection(Tabs["UI Settings"])
 ThemeManager:ApplyToTab(Tabs["UI Settings"])
 SaveManager:LoadAutoloadConfig()
+
+loadingStatus("ready", 1)
+task.delay(0.4, finishLoading)
