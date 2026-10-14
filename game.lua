@@ -19,6 +19,11 @@ local LocalPlayer = Players.LocalPlayer
 
 local LobbyPlaceId = 18186775539
 
+-- Everything below runs inside this function so the main chunk keeps only the
+-- service imports. Luau allows at most 200 locals per function, and the script
+-- body had just crossed that limit (which made loadstring fail).
+local function __entry()
+
 -- Current floor, read from ReplicatedStorage.GameInfo.GameStyle (a StringValue).
 -- Known floors: "Foundation" (main floor) and "Graveyard".
 local GameInfo = ReplicatedStorage:WaitForChild("GameInfo", 10)
@@ -2755,3 +2760,7 @@ SaveManager:LoadAutoloadConfig()
 
 loadingStatus("ready", 1)
 task.delay(0.4, finishLoading)
+
+end
+
+__entry()
