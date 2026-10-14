@@ -13,8 +13,11 @@ local UserInputService = game:GetService("UserInputService")
 local Lighting = game:GetService("Lighting")
 local SoundService = game:GetService("SoundService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local TeleportService = game:GetService("TeleportService")
 
 local LocalPlayer = Players.LocalPlayer
+
+local LobbyPlaceId = 18186775539
 
 -- Current floor, read from ReplicatedStorage.GameInfo.GameStyle (a StringValue).
 -- Known floors: "Foundation" (main floor) and "Graveyard".
@@ -335,6 +338,37 @@ AutomationGroupbox:AddSlider("AutoplayDelay", {
 	Max = 3,
 	Rounding = 2,
 })
+
+loadingStatus("loading actions", 0.34)
+
+local ActionGroupbox = Tabs.Character:AddGroupbox({
+	Side = "Right",
+	Name = "Actions",
+	Description = "Quick actions",
+	IconName = "zap",
+})
+
+ActionGroupbox:AddButton("Reset Character", function()
+	local character = LocalPlayer.Character
+	local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+	if humanoid then
+		humanoid.Health = 0
+	end
+end)
+
+ActionGroupbox:AddButton("Teleport to Lobby", function()
+	local ok, err = pcall(function()
+		TeleportService:Teleport(LobbyPlaceId, LocalPlayer)
+	end)
+	if not ok then
+		Library:Notify({
+			Title = "Teleport to Lobby",
+			Description = "Teleport failed: " .. tostring(err),
+			Icon = "triangle-alert",
+			Time = 5,
+		})
+	end
+end)
 
 -- =========================================================
 -- Visuals tab: ESP
