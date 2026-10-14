@@ -212,22 +212,42 @@ local ChangelogGroupbox = Tabs.Changelog:AddGroupbox({
 	IconName = "scroll-text",
 })
 
-ChangelogGroupbox:AddLabel("<b>mspaint</b>", false)
+-- The changelog is fetched from .changelog in the repository.
+local ChangelogUrl = "https://raw.githubusercontent.com/burneraccountneeded1/nocodeneeds/refs/heads/main/.changelog"
 
-ChangelogGroupbox:AddDivider()
-ChangelogGroupbox:AddLabel("<b>Added</b>", false)
-ChangelogGroupbox:AddLabel("- Camera FOV slider (60 - 120)", true)
-ChangelogGroupbox:AddLabel("- Objective ESP: highlights levers at Room###.Scriptable.LeverModel", true)
-ChangelogGroupbox:AddLabel("- Entity ESP & spawn notifier for Hisoka and Ambush", true)
-ChangelogGroupbox:AddLabel("- Loading GUI that shows what is loading on start", true)
-ChangelogGroupbox:AddLabel("- Floor tab that only appears on the Graveyard floor", true)
-ChangelogGroupbox:AddLabel("- Graveyard restricts Entity ESP & notifier to Hisoka", true)
+local function formatChangelogLabel(text)
+	return (text:gsub("%*%*(.-)%*%*", "<b>%1</b>"))
+end
 
-ChangelogGroupbox:AddDivider()
-ChangelogGroupbox:AddLabel("<b>Changed</b>", false)
-ChangelogGroupbox:AddLabel("- Movement and Automation moved to the Character tab", true)
-ChangelogGroupbox:AddLabel("- Removed Minecart Speed (RoamingCart is server-controlled)", true)
-ChangelogGroupbox:AddLabel("- Ambush is now avoided by Avoid Entities", true)
+local function renderChangelog(source)
+	local lastWasDivider = true
+
+	for rawLine in string.gmatch(source, "[^\r\n]+") do
+		local line = rawLine:match("^%s*(.-)%s*$")
+
+		if line == "" then
+			if not lastWasDivider then
+				ChangelogGroupbox:AddDivider()
+				lastWasDivider = true
+			end
+		else
+			local header = line:match("^#+%s*(.+)$")
+			if header then
+				ChangelogGroupbox:AddLabel("<b>" .. formatChangelogLabel(header) .. "</b>", false)
+			else
+				ChangelogGroupbox:AddLabel(formatChangelogLabel(line), true)
+			end
+			lastWasDivider = false
+		end
+	end
+end
+
+local changelogOk, changelogSource = pcall(game.HttpGet, game, ChangelogUrl)
+if changelogOk and type(changelogSource) == "string" and #changelogSource > 0 then
+	renderChangelog(changelogSource)
+else
+	ChangelogGroupbox:AddLabel("Could not load changelog.", true)
+end
 
 -- =========================================================
 -- Character tab: movement
