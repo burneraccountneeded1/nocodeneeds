@@ -1,6 +1,8 @@
 # mspaint
 
+## Fixed
+- Entity ESP now draws a fill and outline for entities with invisible hitboxes
+
 ## Added
 - Character tab Actions groupbox with Reset Character and Teleport to Lobby buttons
 - Entity ESP Fill toggle and Fill Transparency slider
-- Changelog is now read from .changelog in the repository

@@ -677,25 +677,118 @@ local function getViewerPosition()
 	return camera and camera.CFrame.Position or Vector3.zero
 end
 
+local function getEntityParts(target)
+	local parts = {}
+	if target:IsA("BasePart") then
+		table.insert(parts, target)
+	end
+	for _, descendant in ipairs(target:GetDescendants()) do
+		if descendant:IsA("BasePart") then
+			table.insert(parts, descendant)
+		end
+	end
+	return parts
+end
+
+local function createEntityChams(target, color, fillTransparency)
+	local proxy = Instance.new("Model")
+	proxy.Name = "mspaint_entity_chams"
+	proxy.Parent = EspFolder
+
+	local clones = {}
+	for _, source in ipairs(getEntityParts(target)) do
+		local clone = source:Clone()
+		for _, child in ipairs(clone:GetDescendants()) do
+			if child:IsA("Decal") or child:IsA("Texture") or child:IsA("SurfaceAppearance") or child:IsA("ParticleEmitter") or child:IsA("Trail") or child:IsA("Beam") then
+				child:Destroy()
+			end
+		end
+		if clone:IsA("MeshPart") then
+			clone.TextureID = ""
+		end
+		clone.Color = color
+		clone.Material = Enum.Material.SmoothPlastic
+		clone.Transparency = math.min(fillTransparency, 0.98)
+		clone.Anchored = true
+		clone.CanCollide = false
+		clone.CanQuery = false
+		clone.CanTouch = false
+		clone.CastShadow = false
+		clone.Massless = true
+		clone.Parent = proxy
+		table.insert(clones, { source = source, clone = clone })
+	end
+
+	local outline = Instance.new("Highlight")
+	outline.Name = "mspaint_entity_outline"
+	outline.Adornee = proxy
+	outline.FillColor = color
+	outline.OutlineColor = color
+	outline.FillTransparency = 1
+	outline.OutlineTransparency = 0
+	outline.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
+	outline.Parent = EspFolder
+
+	return { proxy = proxy, clones = clones, outline = outline }
+end
+
+local function updateEntityChams(chams, color, fillTransparency)
+	local transparency = math.min(fillTransparency, 0.98)
+	for _, pair in ipairs(chams.clones) do
+		local source = pair.source
+		local clone = pair.clone
+		if source.Parent then
+			clone.CFrame = source.CFrame
+			clone.Size = source.Size
+		end
+		clone.Color = color
+		clone.Transparency = transparency
+	end
+	chams.outline.FillColor = color
+	chams.outline.OutlineColor = color
+end
+
+local function destroyEntityChams(chams)
+	for _, pair in ipairs(chams.clones) do
+		pair.clone:Destroy()
+	end
+	if chams.proxy then
+		chams.proxy:Destroy()
+	end
+	if chams.outline then
+		chams.outline:Destroy()
+	end
+end
+
 local function destroyEntry(entry)
 	if entry.highlight then
 		entry.highlight:Destroy()
+	end
+	if entry.chams then
+		destroyEntityChams(entry.chams)
 	end
 	if entry.billboard then
 		entry.billboard:Destroy()
 	end
 end
 
-local function createEntry(target, color, baseText)
-	local highlight = Instance.new("Highlight")
-	highlight.Name = "mspaint_highlight"
-	highlight.Adornee = target
-	highlight.FillColor = color
-	highlight.OutlineColor = color
-	highlight.FillTransparency = 0.5
-	highlight.OutlineTransparency = 0
-	highlight.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
-	highlight.Parent = EspFolder
+local function createEntry(target, color, baseText, useChams)
+	local entry = { baseText = baseText }
+
+	if useChams then
+		entry.chams = createEntityChams(target, color, 0.5)
+	else
+		local highlight = Instance.new("Highlight")
+		highlight.Name = "mspaint_highlight"
+		highlight.Adornee = target
+		highlight.FillColor = color
+		highlight.OutlineColor = color
+		highlight.FillTransparency = 0.5
+		highlight.OutlineTransparency = 0
+		highlight.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
+		highlight.Parent = EspFolder
+		entry.highlight = highlight
+	end
 
 	local billboard = Instance.new("BillboardGui")
 	billboard.Name = "mspaint_billboard"
@@ -717,15 +810,12 @@ local function createEntry(target, color, baseText)
 	label.Text = baseText
 	label.Parent = billboard
 
-	return {
-		highlight = highlight,
-		billboard = billboard,
-		label = label,
-		baseText = baseText,
-	}
+	entry.billboard = billboard
+	entry.label = label
+	return entry
 end
 
-local function updateSet(cache, targets, enabled, color, textFor, fillTransparency)
+local function updateSet(cache, targets, enabled, color, textFor, fillTransparency, useChams)
 	if not enabled then
 		for target, entry in pairs(cache) do
 			destroyEntry(entry)
@@ -743,13 +833,18 @@ local function updateSet(cache, targets, enabled, color, textFor, fillTransparen
 
 			local entry = cache[target]
 			if not entry then
-				entry = createEntry(target, color, textFor(target))
+				entry = createEntry(target, color, textFor(target), useChams)
 				cache[target] = entry
 			end
 
-			entry.highlight.FillColor = color
-			entry.highlight.OutlineColor = color
-			entry.highlight.FillTransparency = fillTransparency or 0.5
+			if entry.highlight then
+				entry.highlight.FillColor = color
+				entry.highlight.OutlineColor = color
+				entry.highlight.FillTransparency = fillTransparency or 0.5
+			end
+			if entry.chams then
+				updateEntityChams(entry.chams, color, fillTransparency or 0.5)
+			end
 			entry.label.TextColor3 = color
 			entry.baseText = textFor(target)
 
@@ -2518,7 +2613,7 @@ task.spawn(function()
 			return "Door"
 		end)
 
-		updateSet(entityCache, collectEntities(), entityEspEnabled, entityColor, entityDisplayName, entityFill)
+		updateSet(entityCache, collectEntities(), entityEspEnabled, entityColor, entityDisplayName, entityFill, true)
 
 		updateSet(lockerCache, collectLockers(), lockerEspEnabled, lockerColor, function()
 			return "Locker"
