@@ -3,8 +3,6 @@ local StarterGui = game:GetService("StarterGui")
 local LobbyPlaceId = 18186775539
 local MainPlaceId = 77614252294790
 
-local SelfUrl = "https://raw.githubusercontent.com/burneraccountneeded1/nocodeneeds/refs/heads/main/main.lua"
-
 local EspUrl = "https://raw.githubusercontent.com/burneraccountneeded1/nocodeneeds/refs/heads/main/esp.lua"
 local LobbyUrl = "https://raw.githubusercontent.com/burneraccountneeded1/nocodeneeds/refs/heads/main/lobby.lua"
 
@@ -68,9 +66,6 @@ local function runForPlace()
 	notify(string.format("%s loaded in %.2fs", label, os.clock() - startedAt))
 end
 
+-- This loader does NOT queue itself: it only runs when executed directly, or when
+-- esp.lua's "Execute on Teleport" toggle queues it.
 runForPlace()
-
--- After a teleport the place id changes (new session), so re-run this loader.
-if type(queue_on_teleport) == "function" then
-	pcall(queue_on_teleport, string.format("loadstring(game:HttpGet(%q))()", SelfUrl))
-end

@@ -8,6 +8,7 @@ local Toggles = Library.Toggles
 
 local TeleportService = game:GetService("TeleportService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local UserInputService = game:GetService("UserInputService")
 
 -- Places this script talks to
 local LobbyPlaceId = 18186775539
@@ -122,6 +123,27 @@ local Window = Library:CreateWindow({
 	Icon = 95816097006870,
 	NotifySide = "Right",
 })
+
+-- Obsidian snapshots the mouse-icon state when the library loads. During an
+-- execute-on-teleport reload the cursor is usually visible, which makes Obsidian
+-- leave the cursor on screen (and the camera unlocked) once the menu closes.
+if not Library.IsMobile then
+	Library.OriginalMouseIconEnabled = false
+	UserInputService.MouseIconEnabled = false
+	UserInputService.MouseBehavior = Enum.MouseBehavior.LockCenter
+
+	task.spawn(function()
+		local wasOpen = Library.Toggled
+		while Library.Unloaded ~= true do
+			if wasOpen and not Library.Toggled then
+				UserInputService.MouseIconEnabled = false
+				UserInputService.MouseBehavior = Enum.MouseBehavior.LockCenter
+			end
+			wasOpen = Library.Toggled
+			task.wait(0.1)
+		end
+	end)
+end
 
 loadingStatus("loading library", 0.1)
 
