@@ -1214,25 +1214,28 @@ end
 loadingStatus("loading entity collection", 0.7)
 
 local function findDoorPart(room)
+	local bestPart
 	for _, child in ipairs(room:GetChildren()) do
 		if child.Name:lower() == "door" and isEspTarget(child) then
-			return child
+			if child:IsA("Model") then
+				return child
+			end
+			bestPart = bestPart or child
 		end
 	end
 
-	for _, child in ipairs(room:GetChildren()) do
-		if child.Name:lower():find("door") and isEspTarget(child) then
-			return child
-		end
-	end
-
+	local bestModel
 	for _, descendant in ipairs(room:GetDescendants()) do
-		if descendant.Name:lower():find("door") and isEspTarget(descendant) then
-			return descendant
+		if descendant.Name:lower() == "door" and isEspTarget(descendant) then
+			if descendant:IsA("Model") then
+				bestModel = bestModel or descendant
+			elseif not bestPart then
+				bestPart = descendant
+			end
 		end
 	end
 
-	return nil
+	return bestModel or bestPart
 end
 
 local function collectDoors()

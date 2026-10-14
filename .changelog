@@ -1,6 +1,7 @@
 # mspaint
 
 ## Fixed
+- Door ESP now only targets the Door model in each room folder, so it keeps working after the seek chase
 - Entity ESP now draws a fill and outline for entities with invisible hitboxes
 
 ## Added
