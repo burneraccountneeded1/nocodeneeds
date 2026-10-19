@@ -1412,6 +1412,7 @@ loadingStatus("loading character modifiers", 0.74)
 
 local walkSpeedEnabled = false
 local walkSpeedValue = 16
+local speedBodyVelocity
 local jumpEnabled = false
 local jumpPowerValue = 50
 local noclipEnabled = false
@@ -1594,6 +1595,38 @@ movementConnection = RunService.RenderStepped:Connect(function()
 				end
 			end
 		end
+	end
+
+	-- Velocity-based speed, only for places that ignore or reset Humanoid.WalkSpeed.
+	if (IsVerPlace or game.PlaceId == 117314306495532) and walkSpeedEnabled and not flyEnabled and character then
+		local root = character:FindFirstChild("HumanoidRootPart")
+		local humanoid = character:FindFirstChildOfClass("Humanoid")
+		if root and humanoid then
+			if not speedBodyVelocity or speedBodyVelocity.Parent ~= root then
+				if speedBodyVelocity then
+					speedBodyVelocity:Destroy()
+				end
+				speedBodyVelocity = Instance.new("BodyVelocity")
+				speedBodyVelocity.Name = "mspaint_speed"
+				speedBodyVelocity.MaxForce = Vector3.new(math.huge, 0, math.huge)
+				speedBodyVelocity.P = 10000
+				speedBodyVelocity.Parent = root
+			end
+
+			local moveDirection = humanoid.MoveDirection
+			if moveDirection.Magnitude > 0.05 then
+				speedBodyVelocity.MaxForce = Vector3.new(math.huge, 0, math.huge)
+				speedBodyVelocity.Velocity = Vector3.new(moveDirection.X, 0, moveDirection.Z) * walkSpeedValue
+			else
+				speedBodyVelocity.MaxForce = Vector3.zero
+			end
+		elseif speedBodyVelocity then
+			speedBodyVelocity:Destroy()
+			speedBodyVelocity = nil
+		end
+	elseif speedBodyVelocity then
+		speedBodyVelocity:Destroy()
+		speedBodyVelocity = nil
 	end
 
 	if flyEnabled and flyVelocity and flyVelocity.Parent then
@@ -2813,6 +2846,10 @@ Library:OnUnload(function()
 		cameraConnection:Disconnect()
 	end
 	stopFly()
+	if speedBodyVelocity then
+		speedBodyVelocity:Destroy()
+		speedBodyVelocity = nil
+	end
 	restoreNoclip()
 	removeFullbright()
 	stopAntiEyes()

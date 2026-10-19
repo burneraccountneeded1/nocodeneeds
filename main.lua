@@ -3,6 +3,7 @@ local StarterGui = game:GetService("StarterGui")
 local LobbyPlaceId = 18186775539
 local MainPlaceId = 77614252294790
 local VerPlaceId = 134208374070897
+local VelocityPlaceId = 117314306495532
 
 local GameUrl = "https://raw.githubusercontent.com/burneraccountneeded1/nocodeneeds/refs/heads/main/game.lua"
 local LobbyUrl = "https://raw.githubusercontent.com/burneraccountneeded1/nocodeneeds/refs/heads/main/lobby.lua"
@@ -11,12 +12,14 @@ local ScriptUrls = {
 	[MainPlaceId] = GameUrl,
 	[LobbyPlaceId] = LobbyUrl,
 	[VerPlaceId] = GameUrl,
+	[VelocityPlaceId] = GameUrl,
 }
 
 local ScriptNames = {
 	[MainPlaceId] = "game.lua (main game)",
 	[LobbyPlaceId] = "lobby.lua (lobby)",
 	[VerPlaceId] = "game.lua (VER place)",
+	[VelocityPlaceId] = "game.lua (velocity place)",
 }
 
 local function notify(message)
