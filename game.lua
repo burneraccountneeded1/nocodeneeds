@@ -31,19 +31,33 @@ local GameStyleValue = GameInfo and GameInfo:FindFirstChild("GameStyle")
 local GameStyle = (GameStyleValue and GameStyleValue.Value) or ""
 local IsGraveyard = string.lower(GameStyle) == "graveyard"
 
+-- Place-specific variant: only Character + Visuals, ESP targeting the "VER" model.
+local IsVerPlace = game.PlaceId == 134208374070897
+
 -- Add any other workspace entity names here as you discover them
 local EntityNames = { "Rush", "Ram", "Stare", "Eyes", "Hisoka", "Ambush" }
 local AvoidEntityNames = { "Rush", "Ram", "Ambush" }
 local EntityEspNames = { "Rush", "Ram", "Stare", "Eyes", "Peakaboo", "Hisoka", "Ambush" }
 local GraveyardEntityEspNames = { "Hisoka" }
 local GraveyardEntityNames = { "Hisoka" }
+
+if IsVerPlace then
+	EntityNames = { "VER" }
+	AvoidEntityNames = { "VER" }
+	EntityEspNames = { "VER" }
+	GraveyardEntityEspNames = { "VER" }
+	GraveyardEntityNames = { "VER" }
+end
+
 local RoomNamePattern = "^[Rr]oom%d+$"
 
 local entityEspSelections = {}
 
 local function initializeEntityEspSelections()
 	entityEspSelections = {}
-	if IsGraveyard then
+	if IsVerPlace then
+		entityEspSelections["VER"] = true
+	elseif IsGraveyard then
 		entityEspSelections["Hisoka"] = true
 	else
 		for _, name in ipairs(EntityEspNames) do
@@ -405,7 +419,7 @@ EspGroupbox:AddToggle("EntityESP", {
 })
 
 EspGroupbox:AddDropdown("EntityESPFilter", {
-	Values = (IsGraveyard and GraveyardEntityEspNames) or EntityEspNames,
+	Values = (IsVerPlace and EntityEspNames) or (IsGraveyard and GraveyardEntityEspNames) or EntityEspNames,
 	Default = 1,
 	Multi = true,
 	Text = "Entities in ESP",
@@ -2567,7 +2581,9 @@ Options.EntityESPFilter:OnChanged(function(Value)
 	entityEspSelections = Value or {}
 end)
 
-if IsGraveyard then
+if IsVerPlace then
+	Options.EntityESPFilter:SetValue({ VER = true })
+elseif IsGraveyard then
 	Options.EntityESPFilter:SetValue({ Hisoka = true })
 else
 	Options.EntityESPFilter:SetValue({
@@ -2624,6 +2640,9 @@ end
 local AllNotifierEntities = { "Rush", "Screech", "Ram", "Stare", "Eyes", "Hisoka", "Ambush" }
 
 local function applyGameStyle(style)
+	if IsVerPlace then
+		return
+	end
 	local graveyard = string.lower(style or "") == "graveyard"
 
 	if graveyard then
@@ -2846,6 +2865,35 @@ SaveManager:SetFolder("AnticheatTest/my-game")
 SaveManager:BuildConfigSection(Tabs["UI Settings"])
 ThemeManager:ApplyToTab(Tabs["UI Settings"])
 SaveManager:LoadAutoloadConfig()
+
+-- Place 134208374070897: keep only Character + Visuals, with Entity ESP on "VER".
+-- The tab buttons are removed and the containers hidden (not destroyed) so the
+-- menu keybind and all option objects keep working.
+if IsVerPlace then
+	local function hideVerTab(name)
+		local tab = Tabs[name]
+		if not tab then
+			return
+		end
+		if tab.Button then
+			tab.Button:Destroy()
+		end
+		if tab.Container then
+			tab.Container.Visible = false
+		end
+		Library.Tabs[name] = nil
+	end
+
+	Tabs.Character:Show()
+	hideVerTab("Changelog")
+	hideVerTab("Notifier")
+	hideVerTab("Exploit")
+	hideVerTab("Debug")
+	hideVerTab("UI Settings")
+	hideVerTab("Floor")
+
+	Toggles.EntityESP:SetValue(true)
+end
 
 loadingStatus("ready", 1)
 task.delay(0.4, finishLoading)
