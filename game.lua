@@ -1486,6 +1486,13 @@ end
 
 Toggles.EnableWalkSpeed:OnChanged(function(Value)
 	walkSpeedEnabled = Value
+	if Value then
+		local character = getCharacter()
+		local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+		if humanoid then
+			humanoid.WalkSpeed = walkSpeedValue
+		end
+	end
 end)
 
 Options.WalkSpeed:OnChanged(function(Value)
@@ -1520,9 +1527,42 @@ Options.FlySpeed:OnChanged(function(Value)
 	flySpeedValue = Value
 end)
 
+-- Re-apply WalkSpeed the instant anything (e.g. the game) changes it. Some
+-- places reset WalkSpeed aggressively, so the per-frame loop alone can be
+-- overridden before movement is simulated.
+local walkSpeedWatch = {}
+
+local function watchWalkSpeed(humanoid)
+	if not humanoid or walkSpeedWatch[humanoid] then
+		return
+	end
+
+	walkSpeedWatch[humanoid] = true
+	humanoid:GetPropertyChangedSignal("WalkSpeed"):Connect(function()
+		if walkSpeedEnabled and humanoid.Parent and humanoid.WalkSpeed ~= walkSpeedValue then
+			humanoid.WalkSpeed = walkSpeedValue
+		end
+	end)
+end
+
+local function watchCurrentWalkSpeed()
+	local character = getCharacter()
+	local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+	if humanoid then
+		if walkSpeedEnabled then
+			humanoid.WalkSpeed = walkSpeedValue
+		end
+		watchWalkSpeed(humanoid)
+	end
+end
+
+watchCurrentWalkSpeed()
+
 LocalPlayer.CharacterAdded:Connect(function()
 	table.clear(noclipSaved)
+	table.clear(walkSpeedWatch)
 	task.wait(0.5)
+	watchCurrentWalkSpeed()
 	if flyEnabled then
 		startFly()
 	end
