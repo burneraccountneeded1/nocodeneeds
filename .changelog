@@ -12,6 +12,7 @@
 - Entity ESP is filled again (opaque chams + always-on-top highlight) for entities with invisible hitboxes
 
 ## Added
+- mspaint_addon.lua: mspaint addon with a Third Person toggle (V) and a dynamic keybind overlay
 - Visuals Camera groupbox: Third Person toggle and keybind (default V)
 - UI Settings: Show Keybinds toggle that displays your keybinds on the left side of the screen
 - Visuals tab Settings groupbox: tracers, arrows, labels, distance, 2D boxes, rainbow, text size, and tracer thickness
