@@ -1,5 +1,8 @@
 # mspaint
 
+## Changed
+- ESP now uses mstudio45's ESP Library (highlights, labels, and screen-space boxes for invisible entities)
+
 ## Fixed
 - WalkSpeed now re-applies instantly when the game resets it (fixes it not working in some places such as VER)
 - WalkSpeed uses velocity-based movement in places 117314306495532 and 134208374070897

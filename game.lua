@@ -2,6 +2,7 @@ local repo = "https://raw.githubusercontent.com/deividcomsono/Obsidian/main/"
 local Library = loadstring(game:HttpGet(repo .. "Library.lua"))()
 local ThemeManager = loadstring(game:HttpGet(repo .. "addons/ThemeManager.lua"))()
 local SaveManager = loadstring(game:HttpGet(repo .. "addons/SaveManager.lua"))()
+local ESPLibrary = loadstring(game:HttpGet("https://raw.githubusercontent.com/mstudio45/MSESP/refs/heads/main/source.luau"))()
 
 local Options = Library.Options
 local Toggles = Library.Toggles
@@ -708,155 +709,45 @@ local function getWorldPosition(target)
 	return nil
 end
 
-local function getViewerPosition()
-	local character = LocalPlayer.Character
-	local hrp = character and character:FindFirstChild("HumanoidRootPart")
-	if hrp then
-		return hrp.Position
-	end
-	local camera = Workspace.CurrentCamera
-	return camera and camera.CFrame.Position or Vector3.zero
-end
-
-local function getEntityParts(target)
-	local parts = {}
-	if target:IsA("BasePart") then
-		table.insert(parts, target)
-	end
-	for _, descendant in ipairs(target:GetDescendants()) do
-		if descendant:IsA("BasePart") then
-			table.insert(parts, descendant)
-		end
-	end
-	return parts
-end
-
-local function createEntityChams(target, color, fillTransparency)
-	local proxy = Instance.new("Model")
-	proxy.Name = "mspaint_entity_chams"
-	proxy.Parent = EspFolder
-
-	local clones = {}
-	for _, source in ipairs(getEntityParts(target)) do
-		local clone = source:Clone()
-		for _, child in ipairs(clone:GetDescendants()) do
-			if child:IsA("Decal") or child:IsA("Texture") or child:IsA("SurfaceAppearance") or child:IsA("ParticleEmitter") or child:IsA("Trail") or child:IsA("Beam") then
-				child:Destroy()
-			end
-		end
-		if clone:IsA("MeshPart") then
-			clone.TextureID = ""
-		end
-		clone.Color = color
-		clone.Material = Enum.Material.SmoothPlastic
-		clone.Transparency = math.min(fillTransparency, 0.98)
-		clone.Anchored = true
-		clone.CanCollide = false
-		clone.CanQuery = false
-		clone.CanTouch = false
-		clone.CastShadow = false
-		clone.Massless = true
-		clone.Parent = proxy
-		table.insert(clones, { source = source, clone = clone })
-	end
-
-	local outline = Instance.new("Highlight")
-	outline.Name = "mspaint_entity_outline"
-	outline.Adornee = proxy
-	outline.FillColor = color
-	outline.OutlineColor = color
-	outline.FillTransparency = 1
-	outline.OutlineTransparency = 0
-	outline.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
-	outline.Parent = EspFolder
-
-	return { proxy = proxy, clones = clones, outline = outline }
-end
-
-local function updateEntityChams(chams, color, fillTransparency)
-	local transparency = math.min(fillTransparency, 0.98)
-	for _, pair in ipairs(chams.clones) do
-		local source = pair.source
-		local clone = pair.clone
-		if source.Parent then
-			clone.CFrame = source.CFrame
-			clone.Size = source.Size
-		end
-		clone.Color = color
-		clone.Transparency = transparency
-	end
-	chams.outline.FillColor = color
-	chams.outline.OutlineColor = color
-end
-
-local function destroyEntityChams(chams)
-	for _, pair in ipairs(chams.clones) do
-		pair.clone:Destroy()
-	end
-	if chams.proxy then
-		chams.proxy:Destroy()
-	end
-	if chams.outline then
-		chams.outline:Destroy()
-	end
-end
-
 local function destroyEntry(entry)
-	if entry.highlight then
-		entry.highlight:Destroy()
-	end
-	if entry.chams then
-		destroyEntityChams(entry.chams)
-	end
-	if entry.billboard then
-		entry.billboard:Destroy()
+	if entry.esp then
+		entry.esp:Destroy()
 	end
 end
 
-local function createEntry(target, color, baseText, useChams)
-	local entry = { baseText = baseText }
+local function createEntry(target, color, baseText, useBox)
+	local settings = {
+		Name = baseText,
+		Model = target,
+		Color = color,
+		MaxDistance = 1500,
+		StudsOffset = Vector3.new(0, 3, 0),
+		TextSize = 16,
+		ESPType = "Highlight",
+		FillColor = color,
+		OutlineColor = color,
+		FillTransparency = 0.5,
+		OutlineTransparency = 0,
+	}
 
-	if useChams then
-		entry.chams = createEntityChams(target, color, 0.5)
-	else
-		local highlight = Instance.new("Highlight")
-		highlight.Name = "mspaint_highlight"
-		highlight.Adornee = target
-		highlight.FillColor = color
-		highlight.OutlineColor = color
-		highlight.FillTransparency = 0.5
-		highlight.OutlineTransparency = 0
-		highlight.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
-		highlight.Parent = EspFolder
-		entry.highlight = highlight
+	-- Box2D is screen-space, so it still shows models whose parts are invisible.
+	if useBox then
+		settings.Box2D = {
+			Enabled = true,
+			Color = color,
+			Thickness = 1,
+			Transparency = 0.2,
+			Filled = false,
+		}
 	end
 
-	local billboard = Instance.new("BillboardGui")
-	billboard.Name = "mspaint_billboard"
-	billboard.Adornee = target
-	billboard.Size = UDim2.new(0, 220, 0, 44)
-	billboard.StudsOffsetWorldSpace = Vector3.new(0, 3, 0)
-	billboard.AlwaysOnTop = true
-	billboard.MaxDistance = 1500
-	billboard.Parent = EspFolder
-
-	local label = Instance.new("TextLabel")
-	label.BackgroundTransparency = 1
-	label.Size = UDim2.new(1, 0, 1, 0)
-	label.Font = Enum.Font.SourceSansBold
-	label.TextSize = 16
-	label.TextColor3 = color
-	label.TextStrokeTransparency = 0.2
-	label.TextStrokeColor3 = Color3.new(0, 0, 0)
-	label.Text = baseText
-	label.Parent = billboard
-
-	entry.billboard = billboard
-	entry.label = label
-	return entry
+	return {
+		baseText = baseText,
+		esp = ESPLibrary:Add(settings),
+	}
 end
 
-local function updateSet(cache, targets, enabled, color, textFor, fillTransparency, useChams)
+local function updateSet(cache, targets, enabled, color, textFor, fillTransparency, useBox)
 	if not enabled then
 		for target, entry in pairs(cache) do
 			destroyEntry(entry)
@@ -866,7 +757,6 @@ local function updateSet(cache, targets, enabled, color, textFor, fillTransparen
 	end
 
 	local alive = {}
-	local viewerPos = getViewerPosition()
 
 	for _, target in ipairs(targets) do
 		if isEspTarget(target) and target.Parent then
@@ -874,27 +764,19 @@ local function updateSet(cache, targets, enabled, color, textFor, fillTransparen
 
 			local entry = cache[target]
 			if not entry then
-				entry = createEntry(target, color, textFor(target), useChams)
+				entry = createEntry(target, color, textFor(target), useBox)
 				cache[target] = entry
 			end
 
-			if entry.highlight then
-				entry.highlight.FillColor = color
-				entry.highlight.OutlineColor = color
-				entry.highlight.FillTransparency = fillTransparency or 0.5
-			end
-			if entry.chams then
-				updateEntityChams(entry.chams, color, fillTransparency or 0.5)
-			end
-			entry.label.TextColor3 = color
-			entry.baseText = textFor(target)
-
-			local worldPos = getWorldPosition(target)
-			if worldPos then
-				local distance = (worldPos - viewerPos).Magnitude
-				entry.label.Text = string.format("%s\n[%d studs]", entry.baseText, math.floor(distance))
-			else
-				entry.label.Text = entry.baseText
+			if entry.esp then
+				local settings = entry.esp.CurrentSettings
+				settings.Color = color
+				settings.FillColor = color
+				settings.OutlineColor = color
+				settings.FillTransparency = fillTransparency or 0.5
+				if settings.Box2D then
+					settings.Box2D.Color = color
+				end
 			end
 		end
 	end
@@ -2850,6 +2732,9 @@ Library:OnUnload(function()
 		speedBodyVelocity:Destroy()
 		speedBodyVelocity = nil
 	end
+	pcall(function()
+		ESPLibrary:Destroy()
+	end)
 	restoreNoclip()
 	removeFullbright()
 	stopAntiEyes()
