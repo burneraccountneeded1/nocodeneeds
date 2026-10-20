@@ -124,6 +124,7 @@ local ExecuteOnTeleportLoader = 'loadstring(game:HttpGet("https://raw.githubuser
 local loadingGui
 local loadingStatusLabel
 local loadingFill
+local keybindOverlay
 
 local function setupLoadingGui()
 	local parent = (type(gethui) == "function" and gethui()) or LocalPlayer:WaitForChild("PlayerGui")
@@ -617,6 +618,41 @@ local CameraGroupbox = Tabs.Visuals:AddGroupbox({
 	Name = "Camera",
 	Description = "View settings",
 	IconName = "camera",
+})
+
+local thirdPersonBackup
+local function applyThirdPerson(enabled)
+	if enabled then
+		if not thirdPersonBackup then
+			thirdPersonBackup = {
+				CameraMode = LocalPlayer.CameraMode,
+				MinZoom = LocalPlayer.CameraMinZoomDistance,
+				MaxZoom = LocalPlayer.CameraMaxZoomDistance,
+			}
+		end
+		LocalPlayer.CameraMode = Enum.CameraMode.Classic
+		LocalPlayer.CameraMaxZoomDistance = math.max(thirdPersonBackup.MaxZoom, 128)
+		LocalPlayer.CameraMinZoomDistance = math.max(thirdPersonBackup.MinZoom, 12)
+	elseif thirdPersonBackup then
+		LocalPlayer.CameraMode = thirdPersonBackup.CameraMode
+		LocalPlayer.CameraMinZoomDistance = thirdPersonBackup.MinZoom
+		LocalPlayer.CameraMaxZoomDistance = thirdPersonBackup.MaxZoom
+		thirdPersonBackup = nil
+	end
+end
+
+CameraGroupbox:AddToggle("ThirdPerson", {
+	Text = "Third Person",
+	Default = false,
+	Tooltip = "Locks the camera to third person (V)",
+	Callback = function(Value)
+		applyThirdPerson(Value)
+	end,
+}):AddKeyPicker("ThirdPersonKeybind", {
+	Default = "V",
+	Mode = "Toggle",
+	SyncToggleState = true,
+	Text = "Third person keybind",
 })
 
 CameraGroupbox:AddSlider("FOV", {
@@ -2847,6 +2883,10 @@ Library:OnUnload(function()
 	pcall(function()
 		ESPLibrary:Destroy()
 	end)
+	applyThirdPerson(false)
+	if keybindOverlay then
+		keybindOverlay:Destroy()
+	end
 	restoreNoclip()
 	removeFullbright()
 	stopAntiEyes()
@@ -2923,6 +2963,101 @@ MenuGroup:AddLabel("Menu bind"):AddKeyPicker("MenuKeybind", {
 })
 
 Library.ToggleKeybind = Options.MenuKeybind
+
+local keybindList
+local function updateKeybindOverlay()
+	if not keybindList then
+		return
+	end
+	for _, child in ipairs(keybindList:GetChildren()) do
+		if child:IsA("TextLabel") then
+			child:Destroy()
+		end
+	end
+	local entries = {
+		{ Key = Options.MenuKeybind and Options.MenuKeybind.DisplayValue or "RightShift", Label = "Menu" },
+		{ Key = Options.ThirdPersonKeybind and Options.ThirdPersonKeybind.DisplayValue or "V", Label = "Third Person" },
+	}
+	for _, entry in ipairs(entries) do
+		local label = Instance.new("TextLabel")
+		label.Size = UDim2.new(1, 0, 0, 18)
+		label.BackgroundTransparency = 1
+		label.Font = Enum.Font.GothamMedium
+		label.TextSize = 14
+		label.TextXAlignment = Enum.TextXAlignment.Left
+		label.TextColor3 = Color3.fromRGB(225, 225, 232)
+		label.RichText = true
+		label.Text = string.format('<font color="#89b4fa"><b>%s</b></font>  %s', entry.Key, entry.Label)
+		label.Parent = keybindList
+	end
+end
+
+local function createKeybindOverlay()
+	local parent = (type(gethui) == "function" and gethui()) or LocalPlayer:WaitForChild("PlayerGui")
+
+	local gui = Instance.new("ScreenGui")
+	gui.Name = "mspaint_keybinds"
+	gui.IgnoreGuiInset = true
+	gui.ResetOnSpawn = false
+	gui.DisplayOrder = 100
+	gui.Enabled = false
+	gui.Parent = parent
+	keybindOverlay = gui
+
+	local frame = Instance.new("Frame")
+	frame.Size = UDim2.new(0, 180, 0, 0)
+	frame.AutomaticSize = Enum.AutomaticSize.Y
+	frame.Position = UDim2.new(0, 12, 0.5, 0)
+	frame.AnchorPoint = Vector2.new(0, 0.5)
+	frame.BackgroundColor3 = Color3.fromRGB(18, 18, 22)
+	frame.BackgroundTransparency = 0.15
+	frame.BorderSizePixel = 0
+	frame.Parent = gui
+
+	local corner = Instance.new("UICorner")
+	corner.CornerRadius = UDim.new(0, 8)
+	corner.Parent = frame
+
+	local padding = Instance.new("UIPadding")
+	padding.PaddingTop = UDim.new(0, 8)
+	padding.PaddingBottom = UDim.new(0, 8)
+	padding.PaddingLeft = UDim.new(0, 10)
+	padding.PaddingRight = UDim.new(0, 10)
+	padding.Parent = frame
+
+	local list = Instance.new("Frame")
+	list.Size = UDim2.new(1, 0, 0, 0)
+	list.AutomaticSize = Enum.AutomaticSize.Y
+	list.BackgroundTransparency = 1
+	list.Parent = frame
+	keybindList = list
+
+	local layout = Instance.new("UIListLayout")
+	layout.Padding = UDim.new(0, 4)
+	layout.SortOrder = Enum.SortOrder.LayoutOrder
+	layout.Parent = list
+
+	updateKeybindOverlay()
+end
+
+createKeybindOverlay()
+
+Options.MenuKeybind:OnChanged(updateKeybindOverlay)
+if Options.ThirdPersonKeybind then
+	Options.ThirdPersonKeybind:OnChanged(updateKeybindOverlay)
+end
+
+MenuGroup:AddDivider()
+MenuGroup:AddToggle("ShowKeybinds", {
+	Text = "Show Keybinds",
+	Default = false,
+	Tooltip = "Shows your keybinds on the left side of the screen",
+	Callback = function(Value)
+		if keybindOverlay then
+			keybindOverlay.Enabled = Value
+		end
+	end,
+})
 
 ThemeManager:SetLibrary(Library)
 SaveManager:SetLibrary(Library)
