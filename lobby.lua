@@ -24,8 +24,7 @@ do
 
 	local status = "UNKNOWN"
 	if ok and raw then
-		local line = string.match(raw, "^%s*([^\r\n]+)") or ""
-		status = string.upper((string.match(line, "^%s*(.-)%s*$") or ""))
+		status = string.upper(string.match(raw, "^%s*(%a+)") or "")
 	end
 
 	if status == "BROKEN" then

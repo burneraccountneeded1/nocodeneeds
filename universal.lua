@@ -33,8 +33,7 @@ local function readStatus()
 		return "UNKNOWN"
 	end
 
-	local line = string.match(raw, "^%s*([^\r\n]+)") or ""
-	return string.upper((string.match(line, "^%s*(.-)%s*$") or ""))
+	return string.upper(string.match(raw, "^%s*(%a+)") or "")
 end
 
 local Status = readStatus()
