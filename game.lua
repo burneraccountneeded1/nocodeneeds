@@ -805,7 +805,19 @@ local function createEntityChams(target, color, fillTransparency)
 
 	local clones = {}
 	for _, source in ipairs(getEntityParts(target)) do
+		local wasArchivable = source.Archivable
+		if not wasArchivable then
+			source.Archivable = true
+		end
 		local clone = source:Clone()
+		if not wasArchivable then
+			source.Archivable = wasArchivable
+		end
+		if not clone then
+			clone = Instance.new("Part")
+			clone.Size = source.Size
+			clone.CFrame = source.CFrame
+		end
 		for _, child in ipairs(clone:GetDescendants()) do
 			if child:IsA("Decal") or child:IsA("Texture") or child:IsA("SurfaceAppearance") or child:IsA("ParticleEmitter") or child:IsA("Trail") or child:IsA("Beam") then
 				child:Destroy()
@@ -816,7 +828,10 @@ local function createEntityChams(target, color, fillTransparency)
 		end
 		clone.Color = color
 		clone.Material = Enum.Material.SmoothPlastic
-		clone.Transparency = math.min(fillTransparency, 0.98)
+		-- Highlight only renders on parts with 0 transparency, so the chams
+		-- stay opaque and the Highlight supplies the translucent fill/outline.
+		clone.Transparency = 0
+		clone.LocalTransparencyModifier = 0
 		clone.Anchored = true
 		clone.CanCollide = false
 		clone.CanQuery = false
@@ -832,7 +847,7 @@ local function createEntityChams(target, color, fillTransparency)
 	outline.Adornee = proxy
 	outline.FillColor = color
 	outline.OutlineColor = color
-	outline.FillTransparency = 1
+	outline.FillTransparency = math.min(fillTransparency, 0.98)
 	outline.OutlineTransparency = 0
 	outline.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
 	outline.Parent = EspFolder
@@ -850,10 +865,12 @@ local function updateEntityChams(chams, color, fillTransparency)
 			clone.Size = source.Size
 		end
 		clone.Color = color
-		clone.Transparency = transparency
+		clone.Transparency = 0
+		clone.LocalTransparencyModifier = 0
 	end
 	chams.outline.FillColor = color
 	chams.outline.OutlineColor = color
+	chams.outline.FillTransparency = transparency
 end
 
 local function destroyEntityChams(chams)

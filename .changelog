@@ -9,7 +9,7 @@
 - WalkSpeed uses velocity-based movement in places 117314306495532 and 134208374070897
 - Fixed the script failing to load (main chunk exceeded the 200 local variable limit)
 - Door ESP now only targets the Door model in each room folder, so it keeps working after the seek chase
-- Entity ESP is filled again (client-side chams) for entities with invisible hitboxes
+- Entity ESP is filled again (opaque chams + always-on-top highlight) for entities with invisible hitboxes
 
 ## Added
 - Visuals tab Settings groupbox: tracers, arrows, labels, distance, 2D boxes, rainbow, text size, and tracer thickness
