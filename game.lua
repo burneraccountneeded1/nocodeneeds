@@ -246,7 +246,6 @@ local Tabs = {
 	Visuals = Window:AddTab("Visuals", "eye"),
 	Notifier = Window:AddTab("Notifier", "bell"),
 	Exploit = Window:AddTab("Exploit", "shield"),
-	Debug = Window:AddTab("Debug", "bug"),
 	["UI Settings"] = Window:AddTab("UI Settings", "settings"),
 }
 
@@ -647,51 +646,6 @@ PositionGroupbox:AddSlider("PositionOffsetAmount", {
 })
 
 -- =========================================================
--- Debug tab
--- =========================================================
-loadingStatus("loading debug", 0.56)
-
-local DebugLogGroupbox = Tabs.Debug:AddGroupbox({
-	Side = "Left",
-	Name = "Logging",
-	Description = "Console output",
-	IconName = "terminal",
-})
-
-DebugLogGroupbox:AddToggle("LogEntitySpawns", {
-	Text = "Log Entity Spawns",
-	Default = false,
-	Tooltip = "Prints to the console when an entity spawns",
-})
-
-DebugLogGroupbox:AddToggle("LogRaycasts", {
-	Text = "Log Raycasts",
-	Default = false,
-	Tooltip = "Prints every raycast the game performs",
-})
-
-local DebugRayGroupbox = Tabs.Debug:AddGroupbox({
-	Side = "Right",
-	Name = "Raycasts",
-	Description = "Raycast visualiser",
-	IconName = "scan",
-})
-
-DebugRayGroupbox:AddToggle("ShowRaycasts", {
-	Text = "Show Raycasts",
-	Default = false,
-	Tooltip = "Draws a line for every raycast the game performs",
-})
-
-DebugRayGroupbox:AddSlider("RaycastVisualTime", {
-	Text = "Ray Lifetime",
-	Default = 0.15,
-	Min = 0.05,
-	Max = 2,
-	Rounding = 2,
-})
-
--- =========================================================
 -- ESP engine
 -- =========================================================
 loadingStatus("loading esp engine", 0.62)
@@ -742,13 +696,99 @@ local function getWorldPosition(target)
 	return nil
 end
 
+local function getEntityParts(target)
+	local parts = {}
+	if target:IsA("BasePart") then
+		table.insert(parts, target)
+	end
+	for _, descendant in ipairs(target:GetDescendants()) do
+		if descendant:IsA("BasePart") then
+			table.insert(parts, descendant)
+		end
+	end
+	return parts
+end
+
+local function createEntityChams(target, color, fillTransparency)
+	local proxy = Instance.new("Model")
+	proxy.Name = "mspaint_entity_chams"
+	proxy.Parent = EspFolder
+
+	local clones = {}
+	for _, source in ipairs(getEntityParts(target)) do
+		local clone = source:Clone()
+		for _, child in ipairs(clone:GetDescendants()) do
+			if child:IsA("Decal") or child:IsA("Texture") or child:IsA("SurfaceAppearance") or child:IsA("ParticleEmitter") or child:IsA("Trail") or child:IsA("Beam") then
+				child:Destroy()
+			end
+		end
+		if clone:IsA("MeshPart") then
+			clone.TextureID = ""
+		end
+		clone.Color = color
+		clone.Material = Enum.Material.SmoothPlastic
+		clone.Transparency = math.min(fillTransparency, 0.98)
+		clone.Anchored = true
+		clone.CanCollide = false
+		clone.CanQuery = false
+		clone.CanTouch = false
+		clone.CastShadow = false
+		clone.Massless = true
+		clone.Parent = proxy
+		table.insert(clones, { source = source, clone = clone })
+	end
+
+	local outline = Instance.new("Highlight")
+	outline.Name = "mspaint_entity_outline"
+	outline.Adornee = proxy
+	outline.FillColor = color
+	outline.OutlineColor = color
+	outline.FillTransparency = 1
+	outline.OutlineTransparency = 0
+	outline.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
+	outline.Parent = EspFolder
+
+	return { proxy = proxy, clones = clones, outline = outline }
+end
+
+local function updateEntityChams(chams, color, fillTransparency)
+	local transparency = math.min(fillTransparency, 0.98)
+	for _, pair in ipairs(chams.clones) do
+		local source = pair.source
+		local clone = pair.clone
+		if source.Parent then
+			clone.CFrame = source.CFrame
+			clone.Size = source.Size
+		end
+		clone.Color = color
+		clone.Transparency = transparency
+	end
+	chams.outline.FillColor = color
+	chams.outline.OutlineColor = color
+end
+
+local function destroyEntityChams(chams)
+	for _, pair in ipairs(chams.clones) do
+		pair.clone:Destroy()
+	end
+	if chams.proxy then
+		chams.proxy:Destroy()
+	end
+	if chams.outline then
+		chams.outline:Destroy()
+	end
+end
+
 local function destroyEntry(entry)
+	if entry.chams then
+		destroyEntityChams(entry.chams)
+	end
 	if entry.esp then
 		entry.esp:Destroy()
 	end
 end
 
-local function createEntry(target, color, baseText, useBox)
+local function createEntry(target, color, baseText, useChams)
 	local settings = {
 		Name = baseText,
 		Model = target,
@@ -763,24 +803,21 @@ local function createEntry(target, color, baseText, useBox)
 		OutlineTransparency = 0,
 	}
 
-	-- Box2D is screen-space, so it still shows models whose parts are invisible.
-	if useBox then
-		settings.Box2D = {
-			Enabled = true,
-			Color = color,
-			Thickness = 1,
-			Transparency = 0.2,
-			Filled = false,
-		}
-	end
-
-	return {
+	local entry = {
 		baseText = baseText,
 		esp = ESPLibrary:Add(settings),
 	}
+
+	-- Invisible entity parts don't render a Highlight, so entities get a
+	-- client-side chams proxy (tinted clones) for the filled look.
+	if useChams then
+		entry.chams = createEntityChams(target, color, 0.5)
+	end
+
+	return entry
 end
 
-local function updateSet(cache, targets, enabled, color, textFor, fillTransparency, useBox)
+local function updateSet(cache, targets, enabled, color, textFor, fillTransparency, useChams)
 	if not enabled then
 		for target, entry in pairs(cache) do
 			destroyEntry(entry)
@@ -797,7 +834,7 @@ local function updateSet(cache, targets, enabled, color, textFor, fillTransparen
 
 			local entry = cache[target]
 			if not entry then
-				entry = createEntry(target, color, textFor(target), useBox)
+				entry = createEntry(target, color, textFor(target), useChams)
 				cache[target] = entry
 			end
 
@@ -807,9 +844,10 @@ local function updateSet(cache, targets, enabled, color, textFor, fillTransparen
 				settings.FillColor = color
 				settings.OutlineColor = color
 				settings.FillTransparency = fillTransparency or 0.5
-				if settings.Box2D then
-					settings.Box2D.Color = color
-				end
+			end
+
+			if entry.chams then
+				updateEntityChams(entry.chams, color, fillTransparency or 0.5)
 			end
 		end
 	end
@@ -2201,127 +2239,6 @@ Toggles.AutoInteract:OnChanged(function(Value)
 	end
 end)
 
-loadingStatus("loading debug handlers", 0.92)
-
--- =========================================================
--- Debug
--- =========================================================
-
-local logEntitySpawnsEnabled = false
-local logRaycastsEnabled = false
-local showRaycastsEnabled = false
-local raycastVisuals = {}
-
-local RayVisualFolder = Instance.new("Folder")
-RayVisualFolder.Name = "mspaint_raycasts"
-RayVisualFolder.Parent = EspFolder
-
-local function debugPrint(...)
-	print("[mspaint debug]", ...)
-end
-
-local function clearRaycastVisuals()
-	for _, visual in ipairs(raycastVisuals) do
-		if visual and visual.Parent then
-			visual:Destroy()
-		end
-	end
-	table.clear(raycastVisuals)
-end
-
-local function createRaycastVisual(origin, direction)
-	local length = direction.Magnitude
-	if length < 0.01 then
-		return
-	end
-
-	if #raycastVisuals >= 300 then
-		local oldest = table.remove(raycastVisuals, 1)
-		if oldest then
-			oldest:Destroy()
-		end
-	end
-
-	local visual = Instance.new("Part")
-	visual.Anchored = true
-	visual.CanCollide = false
-	visual.CanQuery = false
-	visual.CanTouch = false
-	visual.CastShadow = false
-	visual.Material = Enum.Material.Neon
-	visual.Color = Color3.fromRGB(255, 90, 90)
-	visual.Size = Vector3.new(0.05, 0.05, length)
-	visual.CFrame = CFrame.lookAt(origin + direction * 0.5, origin + direction)
-	visual.Parent = RayVisualFolder
-
-	table.insert(raycastVisuals, visual)
-
-	task.delay(Options.RaycastVisualTime.Value, function()
-		if visual and visual.Parent then
-			visual:Destroy()
-		end
-	end)
-end
-
-Workspace.DescendantAdded:Connect(function(descendant)
-	if not logEntitySpawnsEnabled then
-		return
-	end
-
-	for _, name in ipairs(EntityNames) do
-		if descendant.Name == name then
-			local part = descendant
-			if descendant:IsA("Model") then
-				part = descendant.PrimaryPart or descendant:FindFirstChildWhichIsA("BasePart", true)
-			end
-
-			local position = part and part:IsA("BasePart") and tostring(part.Position) or "?"
-			debugPrint("entity spawned:", name, "at", position)
-			return
-		end
-	end
-end)
-
-local originalNamecall
-if type(hookmetamethod) == "function" and type(getnamecallmethod) == "function" then
-	local function raycastHook(self, ...)
-		if (showRaycastsEnabled or logRaycastsEnabled) and getnamecallmethod() == "Raycast" then
-			local origin, direction = ...
-			if typeof(origin) == "Vector3" and typeof(direction) == "Vector3" then
-				if showRaycastsEnabled then
-					createRaycastVisual(origin, direction)
-				end
-				if logRaycastsEnabled then
-					debugPrint("raycast", tostring(origin), "->", tostring(direction))
-				end
-			end
-		end
-
-		return originalNamecall(self, ...)
-	end
-
-	if type(newcclosure) == "function" then
-		raycastHook = newcclosure(raycastHook)
-	end
-
-	originalNamecall = hookmetamethod(game, "__namecall", raycastHook)
-end
-
-Toggles.LogEntitySpawns:OnChanged(function(Value)
-	logEntitySpawnsEnabled = Value
-end)
-
-Toggles.LogRaycasts:OnChanged(function(Value)
-	logRaycastsEnabled = Value
-end)
-
-Toggles.ShowRaycasts:OnChanged(function(Value)
-	showRaycastsEnabled = Value
-	if not Value then
-		clearRaycastVisuals()
-	end
-end)
-
 loadingStatus("loading autoplay", 0.93)
 
 -- =========================================================
@@ -2775,12 +2692,6 @@ Library:OnUnload(function()
 	stopVoidEffect()
 	stopAutoInteract()
 	stopPositionOffset()
-	clearRaycastVisuals()
-	if originalNamecall and type(hookmetamethod) == "function" then
-		pcall(function()
-			hookmetamethod(game, "__namecall", originalNamecall)
-		end)
-	end
 	clearAllMinecarts()
 	if EspFolder then
 		EspFolder:Destroy()
@@ -2883,7 +2794,6 @@ if IsVerPlace then
 	hideVerTab("Changelog")
 	hideVerTab("Notifier")
 	hideVerTab("Exploit")
-	hideVerTab("Debug")
 	hideVerTab("UI Settings")
 	hideVerTab("Floor")
 
