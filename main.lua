@@ -7,6 +7,8 @@ local VelocityPlaceId = 117314306495532
 
 local GameUrl = "https://raw.githubusercontent.com/burneraccountneeded1/nocodeneeds/refs/heads/main/game.lua"
 local LobbyUrl = "https://raw.githubusercontent.com/burneraccountneeded1/nocodeneeds/refs/heads/main/lobby.lua"
+local UniversalUrl = "https://raw.githubusercontent.com/burneraccountneeded1/nocodeneeds/refs/heads/main/universal.lua"
+local StatusUrl = "https://raw.githubusercontent.com/burneraccountneeded1/nocodeneeds/refs/heads/main/STATUS.txt"
 
 local ScriptUrls = {
 	[MainPlaceId] = GameUrl,
@@ -33,14 +35,37 @@ local function notify(message)
 	end)
 end
 
+local function readStatus()
+	local ok, raw = pcall(function()
+		return game:HttpGet(StatusUrl)
+	end)
+	if not ok or not raw then
+		return "UNKNOWN"
+	end
+
+	local line = string.match(raw, "^%s*([^\r\n]+)") or ""
+	return string.upper((string.match(line, "^%s*(.-)%s*$") or ""))
+end
+
 local function runForPlace()
-	local url = ScriptUrls[game.PlaceId]
-	if not url then
-		notify("No script mapped for place id " .. tostring(game.PlaceId) .. ", nothing to load")
+	local url = ScriptUrls[game.PlaceId] or UniversalUrl
+	local label = ScriptNames[game.PlaceId] or "universal.lua (unsupported place)"
+
+	local status = readStatus()
+	if status == "BROKEN" then
+		local message = "Script is marked BROKEN in STATUS.txt - not loading. Please wait for a fix."
+		print("[loader] " .. message)
+		pcall(function()
+			StarterGui:SetCore("SendNotification", {
+				Title = "SCRIPT BROKEN",
+				Text = message,
+				Duration = 15,
+			})
+		end)
 		return
 	end
 
-	local label = ScriptNames[game.PlaceId] or "script"
+	notify(string.format("Status: %s", status))
 	notify(string.format("Place %d - loading %s", game.PlaceId, label))
 	notify("Fetching " .. url)
 

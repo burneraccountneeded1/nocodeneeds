@@ -11,6 +11,8 @@
 - Entity ESP now draws a fill and outline for entities with invisible hitboxes
 
 ## Added
+- Universal script (universal.lua) for unsupported place ids, with only the Character tab
+- STATUS.txt support: WORKING / FIXING / BROKEN; BROKEN blocks loading and shows an error message
 - Place 134208374070897 now loads a trimmed UI (Character + Visuals only) with Entity ESP targeting the VER model
 - Exploit tab Position groupbox with a Position Offset toggle and amount slider
 - Character tab Actions groupbox with Reset Character and Teleport to Lobby buttons

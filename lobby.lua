@@ -16,6 +16,40 @@ local MainPlaceId = 77614252294790
 
 local LocalPlayer = game:GetService("Players").LocalPlayer
 
+-- Abort if the repository status says the script is broken.
+do
+	local ok, raw = pcall(function()
+		return game:HttpGet("https://raw.githubusercontent.com/burneraccountneeded1/nocodeneeds/refs/heads/main/STATUS.txt")
+	end)
+
+	local status = "UNKNOWN"
+	if ok and raw then
+		local line = string.match(raw, "^%s*([^\r\n]+)") or ""
+		status = string.upper((string.match(line, "^%s*(.-)%s*$") or ""))
+	end
+
+	if status == "BROKEN" then
+		local message = "Script is marked BROKEN in STATUS.txt. Please wait for a fix."
+		pcall(function()
+			Library:Notify({
+				Title = "SCRIPT BROKEN",
+				Description = message,
+				Icon = "circle-x",
+				Time = 15,
+			})
+		end)
+		pcall(function()
+			game:GetService("StarterGui"):SetCore("SendNotification", {
+				Title = "SCRIPT BROKEN",
+				Text = message,
+				Duration = 15,
+			})
+		end)
+		warn("[lobby] STATUS.txt says BROKEN - aborting.")
+		return
+	end
+end
+
 -- =========================================================
 -- Loading overlay
 -- =========================================================
