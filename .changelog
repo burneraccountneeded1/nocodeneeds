@@ -12,6 +12,7 @@
 - Entity ESP is filled again (client-side chams) for entities with invisible hitboxes
 
 ## Added
+- Visuals tab Settings groupbox: tracers, arrows, labels, distance, 2D boxes, rainbow, text size, and tracer thickness
 - Universal script (universal.lua) for unsupported place ids, with only the Character tab
 - STATUS.txt support: WORKING / FIXING / BROKEN; BROKEN blocks loading and shows an error message
 - Place 134208374070897 now loads a trimmed UI (Character + Visuals only) with Entity ESP targeting the VER model

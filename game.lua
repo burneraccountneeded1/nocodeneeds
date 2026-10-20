@@ -4,6 +4,17 @@ local ThemeManager = loadstring(game:HttpGet(repo .. "addons/ThemeManager.lua"))
 local SaveManager = loadstring(game:HttpGet(repo .. "addons/SaveManager.lua"))()
 local ESPLibrary = loadstring(game:HttpGet("https://raw.githubusercontent.com/mstudio45/MSESP/refs/heads/main/source.luau"))()
 
+-- Global ESP component defaults (components are created at Add time and then
+-- shown/hidden live through GlobalConfig).
+ESPLibrary.GlobalConfig.Tracers = false
+ESPLibrary.GlobalConfig.Arrows = false
+ESPLibrary.GlobalConfig.Boxes2D = false
+ESPLibrary.GlobalConfig.Boxes3D = false
+ESPLibrary.GlobalConfig.Skeleton = false
+ESPLibrary.GlobalConfig.Rainbow = false
+ESPLibrary.GlobalConfig.Billboards = true
+ESPLibrary.GlobalConfig.Distance = true
+
 local Options = Library.Options
 local Toggles = Library.Toggles
 
@@ -510,6 +521,84 @@ EspGroupbox:AddToggle("ObjectiveESP", {
 	Title = "Objective ESP Color",
 })
 
+local EspSettingsGroupbox = Tabs.Visuals:AddGroupbox({
+	Side = "Left",
+	Name = "Settings",
+	Description = "ESP appearance",
+	IconName = "sliders-horizontal",
+})
+
+local espTextSize = 16
+local tracerThickness = 2
+
+local function applyEspTextSize(size)
+	for _, esp in pairs(ESPLibrary.ESP) do
+		pcall(function()
+			esp.CurrentSettings.TextSize = size
+		end)
+	end
+end
+
+local function applyTracerThickness(thickness)
+	for _, esp in pairs(ESPLibrary.ESP) do
+		pcall(function()
+			esp.CurrentSettings.Tracer.Thickness = thickness
+		end)
+	end
+end
+
+EspSettingsGroupbox:AddToggle("ESPTracers", {
+	Text = "Tracers",
+	Default = false,
+	Tooltip = "Draws a line from the bottom of the screen to each ESP",
+})
+
+EspSettingsGroupbox:AddSlider("ESPTracerThickness", {
+	Text = "Tracer Thickness",
+	Default = 2,
+	Min = 1,
+	Max = 10,
+	Rounding = 0,
+})
+
+EspSettingsGroupbox:AddToggle("ESPArrows", {
+	Text = "Arrows",
+	Default = false,
+	Tooltip = "Shows an arrow pointing to ESP targets that are off-screen",
+})
+
+EspSettingsGroupbox:AddToggle("ESPLabels", {
+	Text = "Labels",
+	Default = true,
+	Tooltip = "Shows the name (and distance) above each ESP target",
+})
+
+EspSettingsGroupbox:AddToggle("ESPDistance", {
+	Text = "Show Distance",
+	Default = true,
+	Tooltip = "Appends the distance in studs to each label",
+})
+
+EspSettingsGroupbox:AddToggle("ESPBoxes2D", {
+	Text = "2D Boxes",
+	Default = false,
+	Tooltip = "Draws a screen-space box around each ESP target",
+})
+
+EspSettingsGroupbox:AddToggle("ESPRainbow", {
+	Text = "Rainbow",
+	Default = false,
+	Tooltip = "Cycles the ESP colors through the rainbow",
+})
+
+EspSettingsGroupbox:AddSlider("ESPTextSize", {
+	Text = "Text Size",
+	Default = 16,
+	Min = 8,
+	Max = 32,
+	Rounding = 0,
+})
+
 local WorldGroupbox = Tabs.Visuals:AddGroupbox({
 	Side = "Right",
 	Name = "World",
@@ -795,12 +884,31 @@ local function createEntry(target, color, baseText, useChams)
 		Color = color,
 		MaxDistance = 1500,
 		StudsOffset = Vector3.new(0, 3, 0),
-		TextSize = 16,
+		TextSize = espTextSize,
 		ESPType = "Highlight",
 		FillColor = color,
 		OutlineColor = color,
 		FillTransparency = 0.5,
 		OutlineTransparency = 0,
+		Tracer = {
+			Enabled = true,
+			Color = color,
+			Thickness = tracerThickness,
+			Transparency = 0,
+			From = "Bottom",
+		},
+		Arrow = {
+			Enabled = true,
+			Color = color,
+			CenterOffset = 300,
+		},
+		Box2D = {
+			Enabled = true,
+			Color = color,
+			Thickness = 1,
+			Transparency = 0.2,
+			Filled = false,
+		},
 	}
 
 	local entry = {
@@ -844,6 +952,9 @@ local function updateSet(cache, targets, enabled, color, textFor, fillTransparen
 				settings.FillColor = color
 				settings.OutlineColor = color
 				settings.FillTransparency = fillTransparency or 0.5
+				settings.Tracer.Color = color
+				settings.Arrow.Color = color
+				settings.Box2D.Color = color
 			end
 
 			if entry.chams then
@@ -2480,6 +2591,40 @@ end)
 
 Toggles.ObjectiveESP:OnChanged(function(Value)
 	objectiveEspEnabled = Value
+end)
+
+Toggles.ESPTracers:OnChanged(function(Value)
+	ESPLibrary.GlobalConfig.Tracers = Value
+end)
+
+Options.ESPTracerThickness:OnChanged(function(Value)
+	tracerThickness = Value
+	applyTracerThickness(Value)
+end)
+
+Toggles.ESPArrows:OnChanged(function(Value)
+	ESPLibrary.GlobalConfig.Arrows = Value
+end)
+
+Toggles.ESPLabels:OnChanged(function(Value)
+	ESPLibrary.GlobalConfig.Billboards = Value
+end)
+
+Toggles.ESPDistance:OnChanged(function(Value)
+	ESPLibrary.GlobalConfig.Distance = Value
+end)
+
+Toggles.ESPBoxes2D:OnChanged(function(Value)
+	ESPLibrary.GlobalConfig.Boxes2D = Value
+end)
+
+Toggles.ESPRainbow:OnChanged(function(Value)
+	ESPLibrary.GlobalConfig.Rainbow = Value
+end)
+
+Options.ESPTextSize:OnChanged(function(Value)
+	espTextSize = Value
+	applyEspTextSize(Value)
 end)
 
 Options.EntityESPFilter:OnChanged(function(Value)
